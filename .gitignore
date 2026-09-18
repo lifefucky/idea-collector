@@ -221,3 +221,9 @@ __marimo__/
 *.db
 webapp/node_modules/
 webapp/dist/
+
+# Bmad artifacts and agent config (local-only)
+_bmad/
+_bmad-output/
+.agents/
+docs/backlog.md
