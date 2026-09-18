@@ -216,3 +216,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Idea collector
+*.db
+webapp/node_modules/
+webapp/dist/

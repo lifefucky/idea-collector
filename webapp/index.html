@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Карман</title>
+    <style>
+      :root {
+        --surface-base: #ffffff;
+        --surface-raised: #efeff3;
+        --ink-primary: #000000;
+        --ink-secondary: #999999;
+        --accent: #2481cc;
+        --destructive: #ff3b30;
+        --border-hairline: #e5e5ea;
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 24px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --surface-base: #18222d;
+          --surface-raised: #232e3a;
+          --ink-primary: #ffffff;
+          --ink-secondary: #8b9aab;
+          --accent: #6ab2f2;
+          --destructive: #ff6b61;
+          --border-hairline: #2b3a48;
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--tg-theme-bg-color, var(--surface-base));
+        color: var(--tg-theme-text-color, var(--ink-primary));
+        font-family: system-ui, sans-serif;
+      }
+      #app-shell {
+        padding: var(--space-4);
+      }
+      #capture-strip {
+        display: flex;
+        gap: var(--space-3);
+        align-items: flex-start;
+      }
+      #capture-form {
+        flex: 1;
+        margin: 0;
+      }
+      #capture-field {
+        width: 100%;
+        display: block;
+        resize: none;
+        overflow: hidden;
+        min-height: 48px;
+        padding: var(--space-3);
+        border: 1px solid transparent;
+        border-radius: var(--radius-md);
+        background: var(--tg-theme-secondary-bg-color, var(--surface-raised));
+        color: var(--tg-theme-text-color, var(--ink-primary));
+        font: 400 16px / 1.4 system-ui, sans-serif;
+      }
+      #capture-field::placeholder {
+        color: var(--tg-theme-hint-color, var(--ink-secondary));
+      }
+      #capture-field:focus {
+        outline: 2px solid var(--tg-theme-button-color, var(--accent));
+        outline-offset: 0;
+      }
+      #ideas-counter {
+        flex: 0 0 auto;
+        color: var(--tg-theme-hint-color, var(--ink-secondary));
+        font: 400 13px / 1.3 system-ui, sans-serif;
+        padding-top: var(--space-3);
+      }
+      #capture-submit {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      #status-line {
+        margin: var(--space-2) 0 0;
+        min-height: 1.3em;
+        font: 400 13px / 1.3 system-ui, sans-serif;
+      }
+      #status-line.destructive {
+        color: var(--tg-theme-destructive-text-color, var(--destructive));
+      }
+      #idea-list {
+        margin-top: var(--space-4);
+      }
+      .list-skeleton {
+        height: 48px;
+        border-radius: var(--radius-sm);
+        background: var(--tg-theme-secondary-bg-color, var(--surface-raised));
+        opacity: 0.55;
+      }
+      .idea-row {
+        -webkit-user-select: text;
+        user-select: text;
+        font: 400 16px / 1.4 system-ui, sans-serif;
+      }
+      .shelf-title {
+        font: 600 17px / 1.3 system-ui, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app-shell">
+      <div id="capture-strip">
+        <form id="capture-form" method="post" action="/api/ideas" onsubmit="return false;">
+          <textarea
+            id="capture-field"
+            name="text"
+            placeholder="Идея"
+            rows="1"
+            oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"
+          ></textarea>
+          <button id="capture-submit" type="submit">OK</button>
+        </form>
+        <span id="ideas-counter">__IDEAS_COUNT__</span>
+      </div>
+      <p id="status-line" hidden></p>
+      <div id="idea-list">
+        <div class="list-skeleton" aria-hidden="true"></div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

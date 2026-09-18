@@ -1,0 +1,1 @@
+"""Telegram idea pocket."""

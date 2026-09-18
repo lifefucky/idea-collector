@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Forge Report — Личный карман идей</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f5f5f5;
+      --bg-dark: #111827;
+      --fg: #111827;
+      --fg-dark: #e5e7eb;
+      --accent: #2563eb;
+      --accent-soft: #dbeafe;
+      --border: #e5e7eb;
+      --border-dark: #374151;
+      --muted: #6b7280;
+      --muted-dark: #9ca3af;
+      --danger: #b91c1c;
+      --danger-soft: #fee2e2;
+      --success: #15803d;
+      --success-soft: #dcfce7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 2rem;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, var(--bg), #e5e7eb);
+      color: var(--fg);
+    }
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: radial-gradient(circle at top, #1f2937, var(--bg-dark));
+        color: var(--fg-dark);
+      }
+    }
+    .page {
+      max-width: 880px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: 18px;
+      padding: 2rem 2.25rem 2.5rem;
+      box-shadow:
+        0 18px 60px rgba(15, 23, 42, 0.18),
+        0 0 0 1px rgba(15, 23, 42, 0.06);
+    }
+    @media (prefers-color-scheme: dark) {
+      .page {
+        background: radial-gradient(circle at top left, #020617, #020617 40%, #030712);
+        box-shadow:
+          0 18px 60px rgba(0, 0, 0, 0.8),
+          0 0 0 1px rgba(148, 163, 184, 0.25);
+      }
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .title-block h1 {
+      margin: 0 0 0.25rem 0;
+      font-size: 1.7rem;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .title-block p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    @media (prefers-color-scheme: dark) {
+      .title-block p { color: var(--muted-dark); }
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      color: var(--muted);
+    }
+    @media (prefers-color-scheme: dark) {
+      .badge {
+        border-color: rgba(148, 163, 184, 0.9);
+        color: var(--muted-dark);
+      }
+    }
+
+    /* Wax seal */
+    .seal-wrapper {
+      position: relative;
+      width: 150px;
+      height: 150px;
+      flex-shrink: 0;
+    }
+    .seal-label {
+      position: absolute;
+      bottom: -0.3rem;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+    }
+    @media (prefers-color-scheme: dark) {
+      .seal-label { color: var(--muted-dark); }
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      gap: 2rem;
+    }
+    @media (max-width: 800px) {
+      main { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    h2 {
+      margin: 0 0 0.75rem 0;
+      font-size: 1.05rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+    }
+    section + section {
+      margin-top: 1.5rem;
+    }
+    ul {
+      margin: 0.25rem 0 0 1.1rem;
+      padding: 0;
+      font-size: 0.95rem;
+    }
+    li + li { margin-top: 0.25rem; }
+
+    .pill-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.5rem;
+    }
+    .pill {
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+    }
+    @media (prefers-color-scheme: dark) {
+      .pill {
+        border-color: rgba(148, 163, 184, 0.9);
+      }
+    }
+
+    .callout {
+      margin-top: 1rem;
+      padding: 0.75rem 0.9rem;
+      border-radius: 0.9rem;
+      border: 1px dashed rgba(148, 163, 184, 0.7);
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    @media (prefers-color-scheme: dark) {
+      .callout {
+        border-color: rgba(148, 163, 184, 0.9);
+        color: var(--muted-dark);
+      }
+    }
+
+    .personas {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.65rem;
+      font-size: 0.9rem;
+    }
+    .persona {
+      display: flex;
+      gap: 0.55rem;
+      align-items: flex-start;
+    }
+    .persona-icon {
+      font-size: 1.1rem;
+      line-height: 1;
+      margin-top: 0.05rem;
+    }
+    .persona-main {
+      font-weight: 500;
+    }
+    .persona-role {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    @media (prefers-color-scheme: dark) {
+      .persona-role { color: var(--muted-dark); }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="title-block">
+        <div class="badge">
+          <span>Forge Report</span>
+          <span>·</span>
+          <span>telegram-idea-pocket</span>
+        </div>
+        <h1>Личный карман идей</h1>
+        <p>Короткий отчёт кузницы: что мы закалили, что убили, что оставили острым, но живым.</p>
+      </div>
+      <div class="seal-wrapper" aria-label="HARDENED seal">
+        <!-- Wax-style HARDENED seal -->
+        <svg viewBox="0 0 200 200" width="150" height="150" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="waxGrad" cx="30%" cy="25%" r="80%">
+              <stop offset="0%" stop-color="#eff6ff"/>
+              <stop offset="45%" stop-color="#2563eb"/>
+              <stop offset="100%" stop-color="#1d4ed8"/>
+            </radialGradient>
+            <filter id="waxShadow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="rgba(15,23,42,0.55)"/>
+            </filter>
+          </defs>
+          <!-- Organic wax blob -->
+          <path
+            d="M100 18
+               C133 16, 167 30, 178 60
+               C190 90, 183 125, 163 146
+               C143 167, 115 181, 86 181
+               C57 181, 34 169, 23 147
+               C12 125, 10 96, 20 68
+               C31 40, 54 21, 82 18
+               C90 17, 94 17, 100 18Z"
+            fill="url(#waxGrad)"
+            filter="url(#waxShadow)"
+          />
+          <!-- Inner ring -->
+          <circle cx="100" cy="100" r="56"
+                  fill="none"
+                  stroke="rgba(15,23,42,0.15)"
+                  stroke-width="3.5"
+                  stroke-dasharray="4 3" />
+          <!-- HARDENED text -->
+          <g>
+            <circle cx="100" cy="100" r="40" fill="rgba(15,23,42,0.04)" />
+            <text x="100" y="94"
+                  text-anchor="middle"
+                  font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+                  font-size="11"
+                  letter-spacing="0.26em"
+                  fill="#0f172a">
+              HARD
+            </text>
+            <text x="100" y="112"
+                  text-anchor="middle"
+                  font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+                  font-size="11"
+                  letter-spacing="0.26em"
+                  fill="#0f172a">
+              ENED
+            </text>
+          </g>
+        </svg>
+        <div class="seal-label">Статус: закалено</div>
+      </div>
+    </header>
+
+    <main>
+      <div>
+        <section>
+          <h2>Суть закалённой идеи</h2>
+          <ul>
+            <li><strong>Поверхность</strong>: Telegram‑бот + Mini App как отдельный «карман идей», параллельный Saved Messages, но не смешивающийся с ними.</li>
+            <li><strong>Главная польза</strong>: при извлечении автор открывает чистый перечень идей по полкам‑источникам, быстро скроллит и копирует нужные тексты, не пробиваясь через материалы и напоминалки.</li>
+            <li><strong>Режим использования</strong>: основной сценарий просмотра — не вдохновение, а отбор и перенос идей в другие системы (backlog, документы, задачи).</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>То, что мы намеренно зафиксировали</h2>
+          <ul>
+            <li><strong>Идеи только об идеях</strong> — дисциплина: в этот карман летят именно формулировки идей; ссылки, статьи и прочие материалы продолжают жить в Saved Messages или других инструментах.</li>
+            <li><strong>Трение захвата принимается как достаточно низкое</strong> — «пришла мысль → записал в карман»; доп. микроспека по шагам захвата не нужна, ценность рождается на этапе извлечения.</li>
+            <li><strong>Курс на минимализм v1</strong> — без LLM‑пайплайнов, без сложного первого кадра Mini App, без обязательных полей-оценок внутри продукта.</li>
+            <li><strong>Маркер обработки — позже</strong> — в будущих версиях допустим один общий булевый маркер «обработано», но v1 остаётся приемлемым и без него.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Что мы отложили или отвергли</h2>
+          <ul>
+            <li><strong>Детализированные статусы вывода</strong> («в задаче», «в документе» и т.п.) — убраны как избыточные для первой версии.</li>
+            <li><strong>Тяжёлую автоматизацию</strong> (LLM‑переформулировки, оценочные поля, напоминалки писать идеи) — сознательно вынесены за пределы v1, чтобы не размывать быстрый карман.</li>
+          </ul>
+        </section>
+      </div>
+
+      <div>
+        <section>
+          <h2>Выжившие слабые места</h2>
+          <ul>
+            <li><strong>Риск утечки не‑идей</strong>: дисциплина «сюда только идеи» принята как рабочая, но в реальной жизни возможны редкие залёты ссылок/материалов — стоит отслеживать по факту и при необходимости подсветить это в интерфейсе.</li>
+            <li><strong>Поведение без маркера обработки</strong>: пока нет чекбокса, некоторые идеи могут многократно попадаться в обзорах — раздражение нужно проверять на практике и использовать как сигнал для v1.1.</li>
+          </ul>
+          <div class="callout">
+            Для следующих итераций стоит наблюдать: насколько часто автору хочется отличать «сырые, ещё не тронутые идеи» от уже разобранных.
+          </div>
+        </section>
+
+        <section>
+          <h2>Кто ковал идею</h2>
+          <div class="personas">
+            <div class="persona">
+              <div class="persona-icon">📋</div>
+              <div>
+                <div class="persona-main">John — Product Manager</div>
+                <div class="persona-role">ведущий голос</div>
+                <div>Дожал фокус на том, что карман ценен прежде всего при извлечении, а не при захвате.</div>
+              </div>
+            </div>
+            <div class="persona">
+              <div class="persona-icon">🃏</div>
+              <div>
+                <div class="persona-main">Wildcard — Option Generator</div>
+                <div class="persona-role">альтернативы</div>
+                <div>Принёс варианты с маркерами обработки и статусами вывода, часть из которых осознанно отложена.</div>
+              </div>
+            </div>
+            <div class="persona">
+              <div class="persona-icon">📏</div>
+              <div>
+                <div class="persona-main">Level — Claim Checker</div>
+                <div class="persona-role">проверка допущений</div>
+                <div>Разделила, что без чекбокса v1 всё ещё терпим, а потребность в нём — гипотеза для наблюдения.</div>
+              </div>
+            </div>
+          </div>
+          <div class="callout">
+            Финальное решение всегда за автором идеи; персонажи лишь подсветили компромиссы и чётко отделили базу v1 от идей для следующих витков.
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
+
