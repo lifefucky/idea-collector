@@ -49,7 +49,7 @@ Vite + React. Сборка `webapp/dist` отдаётся бэкендом.
 
 | Путь | Назначение |
 |---|---|
-| [webapp/package.json](../webapp/package.json) | Скрипты `dev` / `build` / `preview` и зависимости Telegram Mini Apps. |
+| [webapp/package.json](../webapp/package.json) | Скрипты `dev` / `build` / `preview` / `test` и зависимости Telegram Mini Apps. |
 | [webapp/package-lock.json](../webapp/package-lock.json) | Зафиксированные версии npm. |
 | [webapp/vite.config.ts](../webapp/vite.config.ts) | Сборка Vite, плагин React, `base: "/"`. |
 | [webapp/tsconfig.json](../webapp/tsconfig.json) | TypeScript для `webapp/src` (JSX, strict). |
@@ -60,8 +60,9 @@ Vite + React. Сборка `webapp/dist` отдаётся бэкендом.
 | [webapp/src/sourcesPane.tsx](../webapp/src/sourcesPane.tsx) | Список Sources: оверлей «+», тап открывает url, удаление со строки. |
 | [webapp/src/sourceLink.js](../webapp/src/sourceLink.js) | Открытие url источника через SDK `openLink` или `window.open`. |
 | [webapp/src/listApp.tsx](../webapp/src/listApp.tsx) | Полки и строки идей; тап открывает карточку с копированием описания и удалением. |
+| [webapp/src/listApp.test.tsx](../webapp/src/listApp.test.tsx) | Vitest+jsdom: тап по строке не копирует, тап по телу копирует; delete без призрачной строки. |
 | [webapp/src/capture.js](../webapp/src/capture.js) | POST `/api/ideas`, счётчик, статусы «сохранено» / «скопировано» / «не удалось удалить». |
-| [webapp/src/ideaCard.js](../webapp/src/ideaCard.js) | Поиск идеи по id и сохранение выбранной карточки после перезагрузки списка. |
+| [webapp/src/ideaCard.js](../webapp/src/ideaCard.js) | Поиск идеи по id, `shelvesWithoutIdea` и сохранение выбранной карточки после перезагрузки списка. |
 | [webapp/src/cardChrome.js](../webapp/src/cardChrome.js) | Скрытие полосы захвата на карточке и Telegram BackButton. |
 | [webapp/src/vite-env.d.ts](../webapp/src/vite-env.d.ts) | Типы клиента Vite. |
 
@@ -72,7 +73,8 @@ Vite + React. Сборка `webapp/dist` отдаётся бэкендом.
 | [tests/__init__.py](../tests/__init__.py) | Маркер пакета тестов. |
 | [tests/conftest.py](../tests/conftest.py) | Фикстуры: тестовый `Config` и `IdeaStore` в памяти. |
 | [tests/helpers.py](../tests/helpers.py) | Сборка конфига и подпись `initData` для API-тестов. |
-| [tests/test_web.py](../tests/test_web.py) | HTTP API идей и Sources, auth Mini App, захват и `/csv` через бота. |
+| [tests/test_web.py](../tests/test_web.py) | HTTP API идей и Sources, auth Mini App, захват и `/csv` через бота; subprocess `npm --prefix webapp test`. |
+| [tests/test_csv_export.py](../tests/test_csv_export.py) | Юнит-тесты `csv_bytes` / `csv_filename`: quoting, неразмеченные строки, пустой CSV (только заголовок). |
 | [tests/test_db.py](../tests/test_db.py) | SQLite `IdeaStore` / `SourceStore` и загрузка конфига. |
 | [tests/test_llm.py](../tests/test_llm.py) | Промпт, разбор ответа LLM, очередь Enricher. |
 | [tests/test_shelves.py](../tests/test_shelves.py) | Алиасы полок, группировка, поля `label` / `copy`. |

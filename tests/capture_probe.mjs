@@ -18,7 +18,11 @@ import {
   setBackButtonVisible,
   setCaptureStripHidden,
 } from "../webapp/src/cardChrome.js";
-import { selectedAfterFetch, selectedAfterLoad } from "../webapp/src/ideaCard.js";
+import {
+  selectedAfterFetch,
+  selectedAfterLoad,
+  shelvesWithoutIdea,
+} from "../webapp/src/ideaCard.js";
 import { openSourceUrl } from "../webapp/src/sourceLink.js";
 
 const failures = [];
@@ -298,6 +302,27 @@ assertEqual(
   selectedAfterLoad(selected, false, []),
   selected,
   "callers keep the card on failed fetch",
+);
+
+const shelves = [
+  {
+    name: "own",
+    ideas: [
+      { id: 1, label: "keep-a", copy: "a-copy" },
+      { id: 2, label: "gone", copy: "gone-copy" },
+    ],
+  },
+  { name: "ph", ideas: [{ id: 3, label: "keep-b", copy: "b-copy" }] },
+];
+const withoutGone = shelvesWithoutIdea(shelves, 2);
+assertEqual(withoutGone[0].ideas.length, 1, "deleted id gone from shelf");
+assertEqual(withoutGone[0].ideas[0].id, 1, "sibling idea kept");
+assertEqual(withoutGone[1].ideas[0].id, 3, "other shelf kept");
+assertEqual(shelves[0].ideas.length, 2, "original shelves not mutated");
+assertEqual(
+  shelvesWithoutIdea(withoutGone, 1)[0].ideas.length,
+  0,
+  "empty group stays for namedShelves to hide",
 );
 
 if (failures.length) {

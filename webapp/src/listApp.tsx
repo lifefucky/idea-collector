@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Accordion, Button, Cell, IconButton, Section, Tappable } from "@telegram-apps/telegram-ui";
 import { Icon24ChevronLeft } from "@telegram-apps/telegram-ui/dist/icons/24/chevron_left";
 import { deleteFetchOutcome } from "./capture.js";
-import { selectedAfterLoad } from "./ideaCard.js";
+import { selectedAfterLoad, shelvesWithoutIdea } from "./ideaCard.js";
 
 type Idea = {
   id: number;
@@ -118,6 +118,8 @@ export function IdeaList({
         outcome = deleteFetchOutcome(null);
       }
       if (outcome.close) {
+        const deletedId = selectedIdea.id;
+        setShelves((current) => shelvesWithoutIdea(current ?? [], deletedId));
         onDeleteClear();
         closeCard();
         await load();

@@ -459,6 +459,18 @@ def test_copy_repeat_offline_client_contract() -> None:
     assert "disabled" not in index.split("capture-field")[1].split("textarea")[0]
 
 
+def test_idea_list_click_runner() -> None:
+    completed = subprocess.run(
+        ["npm", "--prefix", str(ROOT / "webapp"), "test"],
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=str(ROOT),
+        timeout=120,
+    )
+    assert completed.returncode == 0, completed.stderr + completed.stdout
+
+
 def test_idea_card_open_does_not_copy() -> None:
     list_app = (ROOT / "webapp" / "src" / "listApp.tsx").read_text(encoding="utf-8")
     main = (ROOT / "webapp" / "src" / "main.tsx").read_text(encoding="utf-8")

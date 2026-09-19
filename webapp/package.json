@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "dependencies": {
     "@telegram-apps/sdk": "^3",
@@ -18,7 +19,9 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@vitejs/plugin-react": "^4",
+    "jsdom": "^26",
     "typescript": "^5",
-    "vite": "^6"
+    "vite": "^6",
+    "vitest": "^3"
   }
 }

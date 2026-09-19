@@ -97,6 +97,8 @@ uv run pytest
 uv run ruff check src tests
 ```
 
+`uv run pytest` запускает `npm --prefix webapp test` и требует `npm --prefix webapp install`.
+
 Локальный Vite (без бота и без API):
 
 ```bash

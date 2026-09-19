@@ -8,6 +8,13 @@ export function ideaById(shelves, id) {
   return undefined;
 }
 
+export function shelvesWithoutIdea(shelves, id) {
+  return shelves.map((shelf) => ({
+    ...shelf,
+    ideas: shelf.ideas.filter((idea) => idea.id !== id),
+  }));
+}
+
 export function selectedAfterFetch(selected, shelves) {
   if (!selected) {
     return null;
