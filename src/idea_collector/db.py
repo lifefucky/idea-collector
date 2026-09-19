@@ -16,6 +16,14 @@ class Idea:
     created_at: str
 
 
+@dataclass(frozen=True)
+class Source:
+    id: int
+    title: str
+    url: str
+    created_at: str
+
+
 def _now() -> str:
     return datetime.now(UTC).isoformat()
 
@@ -37,6 +45,16 @@ class IdeaStore:
                     source TEXT,
                     short_name TEXT,
                     description TEXT,
+                    created_at TEXT NOT NULL
+                )
+                """
+            )
+            self._conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS sources (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    url TEXT NOT NULL,
                     created_at TEXT NOT NULL
                 )
                 """
@@ -144,5 +162,80 @@ class IdeaStore:
             source=row["source"],
             short_name=row["short_name"],
             description=row["description"],
+            created_at=str(row["created_at"]),
+        )
+
+
+class SourceStore:
+    def __init__(self, idea_store: IdeaStore) -> None:
+        self._lock = idea_store._lock
+        self._conn = idea_store._conn
+        with self._lock:
+            self._conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS sources (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    url TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+                """
+            )
+            self._conn.commit()
+
+    def insert(self, title: str, url: str) -> Source:
+        created_at = _now()
+        with self._lock:
+            cursor = self._conn.execute(
+                """
+                INSERT INTO sources (title, url, created_at)
+                VALUES (?, ?, ?)
+                """,
+                (title, url, created_at),
+            )
+            self._conn.commit()
+            source_id = int(cursor.lastrowid)
+        return Source(id=source_id, title=title, url=url, created_at=created_at)
+
+    def list_all(self) -> list[Source]:
+        with self._lock:
+            rows = self._conn.execute(
+                """
+                SELECT id, title, url, created_at
+                FROM sources
+                ORDER BY id ASC
+                """
+            ).fetchall()
+        return [self._from_row(row) for row in rows]
+
+    def get(self, source_id: int) -> Source | None:
+        with self._lock:
+            row = self._conn.execute(
+                """
+                SELECT id, title, url, created_at
+                FROM sources
+                WHERE id = ?
+                """,
+                (source_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return self._from_row(row)
+
+    def delete(self, source_id: int) -> bool:
+        with self._lock:
+            cursor = self._conn.execute(
+                "DELETE FROM sources WHERE id = ?",
+                (source_id,),
+            )
+            self._conn.commit()
+            return cursor.rowcount > 0
+
+    @staticmethod
+    def _from_row(row: sqlite3.Row) -> Source:
+        return Source(
+            id=int(row["id"]),
+            title=str(row["title"]),
+            url=str(row["url"]),
             created_at=str(row["created_at"]),
         )

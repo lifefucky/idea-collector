@@ -22,7 +22,7 @@ from aiohttp.test_utils import TestClient, TestServer
 
 from idea_collector.bot import bot_reply, create_dispatcher
 from idea_collector.capture import capture_text
-from idea_collector.db import Idea, IdeaStore
+from idea_collector.db import Idea, IdeaStore, SourceStore
 from idea_collector.enrich import Enricher
 from idea_collector.shelves import OWN_SHELF
 from idea_collector.web import COUNT_PLACEHOLDER, create_web_app
@@ -92,6 +92,9 @@ async def test_first_paint_field_and_count_without_js_bundle(
     assert "ProductHunt" not in list_html
     assert OWN_SHELF not in list_html
     assert 'id="capture-field"' in body.split('id="idea-list"', 1)[0]
+    body_html = html.split("<body>", 1)[1].split("<script", 1)[0]
+    assert "Tabbar" not in body_html
+    assert "Sources" not in body_html
 
 
 def test_empty_pocket_is_field_and_zero() -> None:
@@ -651,3 +654,205 @@ def test_idea_card_enrich_while_open_contract() -> None:
     idea_card = (ROOT / "webapp" / "src" / "ideaCard.js").read_text(encoding="utf-8")
     assert "export function selectedAfterFetch" in idea_card
     assert "return ideaById(shelves, selected.id) ?? null" in idea_card
+
+
+@pytest.mark.asyncio
+async def test_api_sources_operator_crud_and_errors(client, store: IdeaStore) -> None:
+    sources = SourceStore(store)
+    store.insert("an idea")
+    unauth = await client.get("/api/sources")
+    assert unauth.status == 401
+    assert sources.list_all() == []
+    empty = await client.get("/api/sources", headers=_auth_headers())
+    assert empty.status == 200
+    assert await empty.json() == {"sources": []}
+    stranger_get = await client.get("/api/sources", headers=_auth_headers(user_id=7))
+    assert stranger_get.status == 403
+    forbidden = await client.post(
+        "/api/sources",
+        json={"title": "Nope", "url": "https://nope.example"},
+        headers=_auth_headers(user_id=7),
+    )
+    assert forbidden.status == 403
+    assert sources.list_all() == []
+    forged = await client.post(
+        "/api/sources",
+        json={"title": "Nope", "url": "https://nope.example"},
+        headers={"Authorization": "tma user=%7B%22id%22%3A42%7D&hash=dead"},
+    )
+    assert forged.status == 401
+    assert sources.list_all() == []
+    not_json = await client.post(
+        "/api/sources",
+        data="not-json",
+        headers={**_auth_headers(), "Content-Type": "text/plain"},
+    )
+    assert not_json.status == 400
+    assert (await not_json.json())["error"] == "Не удалось сохранить"
+    assert sources.list_all() == []
+    blank = await client.post(
+        "/api/sources",
+        json={"title": "  ", "url": "https://ok.example"},
+        headers=_auth_headers(),
+    )
+    assert blank.status == 400
+    assert (await blank.json())["error"] == "Не удалось сохранить"
+    missing_url = await client.post(
+        "/api/sources",
+        json={"title": "Doc", "url": ""},
+        headers=_auth_headers(),
+    )
+    assert missing_url.status == 400
+    assert sources.list_all() == []
+    created = await client.post(
+        "/api/sources",
+        json={"title": "  Doc  ", "url": "  https://doc.example  "},
+        headers=_auth_headers(),
+    )
+    assert created.status == 200
+    first = await created.json()
+    assert first == {"id": first["id"], "title": "Doc", "url": "https://doc.example"}
+    second = await client.post(
+        "/api/sources",
+        json={"title": "Repo", "url": "https://repo.example"},
+        headers=_auth_headers(),
+    )
+    assert second.status == 200
+    listed = await client.get("/api/sources", headers=_auth_headers())
+    assert listed.status == 200
+    body = await listed.json()
+    assert list(body.keys()) == ["sources"]
+    assert [item["title"] for item in body["sources"]] == ["Doc", "Repo"]
+    assert all(set(item.keys()) == {"id", "title", "url"} for item in body["sources"])
+    assert store.count() == 1
+    bad_id = await client.delete("/api/sources/not-an-id", headers=_auth_headers())
+    assert bad_id.status == 400
+    assert (await bad_id.json())["error"] == "invalid id"
+    missing = await client.delete("/api/sources/999999", headers=_auth_headers())
+    assert missing.status == 404
+    assert (await missing.json())["error"] == "not found"
+    forbidden_del = await client.delete(
+        f"/api/sources/{first['id']}",
+        headers=_auth_headers(user_id=7),
+    )
+    assert forbidden_del.status == 403
+    assert sources.get(first["id"]) is not None
+    gone = await client.delete(
+        f"/api/sources/{first['id']}",
+        headers=_auth_headers(),
+    )
+    assert gone.status == 200
+    assert await gone.json() == {"ok": True}
+    after = await client.get("/api/sources", headers=_auth_headers())
+    assert [item["title"] for item in (await after.json())["sources"]] == ["Repo"]
+    ideas = await client.get("/api/ideas", headers=_auth_headers())
+    assert ideas.status == 200
+    assert (await ideas.json())["count"] == 1
+
+
+def test_sources_tabbar_overlay_open_delete_contracts() -> None:
+    pocket = (ROOT / "webapp" / "src" / "pocketApp.tsx").read_text(encoding="utf-8")
+    sources = (ROOT / "webapp" / "src" / "sourcesPane.tsx").read_text(encoding="utf-8")
+    main = (ROOT / "webapp" / "src" / "main.tsx").read_text(encoding="utf-8")
+    list_app = (ROOT / "webapp" / "src" / "listApp.tsx").read_text(encoding="utf-8")
+    index = INDEX.read_text(encoding="utf-8")
+    body_html = index.split("<body>", 1)[1].split("<script", 1)[0]
+    ideas_pane = pocket.split('className="pocket-ideas"', 1)[1].split(
+        'className="pocket-sources"',
+        1,
+    )[0]
+    delete_btn = sources.split('className="source-row-delete"', 1)[1].split(
+        "</Button>",
+        1,
+    )[0]
+    cancel_btn = sources.split('className="sources-overlay-cancel"', 1)[1].split(
+        "</Button>",
+        1,
+    )[0]
+    save_btn = sources.split('className="sources-overlay-save"', 1)[1].split(
+        "</Button>",
+        1,
+    )[0]
+    save_fn = sources.split("const saveSource = useCallback", 1)[1].split(
+        "}, [getInitData, load, onOverlayOpenChange, onSaveError, title, url]);",
+        1,
+    )[0]
+    load_fn = sources.split("const load = useCallback", 1)[1].split(
+        "}, [getInitData]);",
+        1,
+    )[0]
+    source_link = (ROOT / "webapp" / "src" / "sourceLink.js").read_text(
+        encoding="utf-8",
+    )
+    delete_css = index.split("button.source-row-delete", 1)[1].split("}", 1)[0]
+    assert "Tabbar" not in body_html
+    assert "Sources" not in body_html
+    assert "Идеи" in pocket
+    assert "Sources" in pocket
+    assert "Tabbar" in pocket
+    assert "Tabbar.Item" in pocket
+    assert "<IdeaList" in ideas_pane
+    assert 'hidden={tab !== "ideas"}' in pocket
+    assert "&& <IdeaList" not in pocket
+    assert 'tab === "ideas" ?' not in pocket
+    assert "?" not in ideas_pane.split("<IdeaList", 1)[0]
+    assert "&&" not in ideas_pane.split("<IdeaList", 1)[0]
+    assert "selectedIdea" in list_app
+    assert "<PocketApp" in main
+    assert "<IdeaList" not in main
+    assert "onSaveError" in main
+    assert "saveStatus(false)" in main
+    assert "onOpenError" in main
+    assert "OPEN_ERROR" in main
+    assert "cancelOverlay" in pocket
+    assert "onCardOpenChange(true, cancelOverlay)" in pocket
+    assert (
+        'setCaptureStripHidden(document.getElementById("capture-strip"), true)'
+        in pocket
+    )
+    assert 'placeholder="Название"' in sources
+    assert 'placeholder="Ссылка"' in sources
+    assert "Сохранить" in save_btn
+    assert "Отмена" in cancel_btn
+    assert "fetch" not in cancel_btn
+    assert 'onClick={() => onOverlayOpenChange(false)}' in cancel_btn
+    assert "if (saveInFlight.current)" in save_fn
+    assert "if (!nextTitle || !nextUrl)" in save_fn
+    assert "return;" in save_fn.split("if (!nextTitle || !nextUrl)", 1)[1].split(
+        "}",
+        1,
+    )[0]
+    assert 'method: "POST"' in save_fn
+    assert "setSources((current) => [...current, created])" in save_fn
+    assert "onOverlayOpenChange(false)" in save_fn
+    assert "await load()" in save_fn
+    assert "onSaveError()" in save_fn
+    assert '"/api/sources"' in load_fn
+    assert "setSources(body.sources ?? [])" in load_fn
+    assert 'className="sources-add"' in sources
+    assert "+" in sources.split('className="sources-add"', 1)[1].split(
+        "</Button>",
+        1,
+    )[0]
+    assert "{source.title}" in sources
+    assert "subtitle=" not in sources
+    assert "description=" not in sources
+    assert "openLink.isAvailable()" in source_link
+    assert 'window.open(url, "_blank", "noopener")' in source_link
+    assert "openSourceUrl" in sources
+    assert "stopPropagation" in delete_btn
+    assert "Удалить" in delete_btn
+    assert "openLink" not in delete_btn
+    assert "openSourceUrl" not in delete_btn
+    assert "confirm" not in sources.lower()
+    assert "undo" not in sources.lower()
+    assert "44pt" in delete_css
+    assert "destructive" in delete_css
+    assert "OPEN_ERROR" in sources
+    assert "Не удалось открыть" in sources
+    assert "onOpenError()" in sources
+    assert "if (deleteInFlight.current)" in sources
+    assert 'method: "DELETE"' in sources
+    assert "sourceDeleteOutcome(response)" in sources
+    assert "sourceDeleteOutcome(null)" in sources
+    assert "blur" not in save_fn.lower()

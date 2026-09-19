@@ -42,6 +42,7 @@
       }
       #app-shell {
         padding: var(--space-4);
+        padding-bottom: calc(var(--space-4) + 72px + env(safe-area-inset-bottom, 0px));
       }
       #capture-strip {
         display: flex;
@@ -155,6 +156,36 @@
         box-sizing: border-box;
         margin-top: var(--space-3);
         color: var(--tg-theme-destructive-text-color, var(--destructive));
+      }
+      .pocket-ideas[hidden],
+      .pocket-sources[hidden] {
+        display: none !important;
+      }
+      .sources-pane {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+      }
+      button.sources-add {
+        align-self: flex-start;
+        min-width: 44pt;
+        min-height: 44pt;
+        box-sizing: border-box;
+      }
+      .source-row {
+        font: 400 16px / 1.4 system-ui, sans-serif;
+      }
+      button.source-row-delete {
+        min-width: 44pt;
+        min-height: 44pt;
+        box-sizing: border-box;
+        color: var(--tg-theme-destructive-text-color, var(--destructive));
+      }
+      .sources-overlay-form {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
+        padding: var(--space-4);
       }
     </style>
   </head>

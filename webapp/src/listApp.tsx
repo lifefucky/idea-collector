@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Accordion, AppRoot, Button, Cell, IconButton, Section, Tappable } from "@telegram-apps/telegram-ui";
+import { Accordion, Button, Cell, IconButton, Section, Tappable } from "@telegram-apps/telegram-ui";
 import { Icon24ChevronLeft } from "@telegram-apps/telegram-ui/dist/icons/24/chevron_left";
 import { deleteFetchOutcome } from "./capture.js";
 import { selectedAfterLoad } from "./ideaCard.js";
@@ -36,7 +36,7 @@ export function IdeaList({
   onCount,
   onDeleteClear,
   onDeleteError,
-  appearance,
+  appearance: _appearance,
   onCardOpenChange,
 }: IdeaListProps) {
   const [shelves, setShelves] = useState<Shelf[] | null>(null);
@@ -162,7 +162,7 @@ export function IdeaList({
   );
 
   return (
-    <AppRoot appearance={appearance} platform="ios">
+    <>
       {selectedIdea ? (
         <div className="idea-card">
           <header className="idea-card-header">
@@ -243,6 +243,6 @@ export function IdeaList({
           ))}
         </>
       )}
-    </AppRoot>
+    </>
   );
 }

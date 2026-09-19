@@ -16,6 +16,7 @@ import {
   bindCaptureForm,
   bindCopy,
   deleteStatus,
+  saveStatus,
   setIdeasCounter,
 } from "./capture.js";
 import {
@@ -23,7 +24,8 @@ import {
   setBackButtonVisible,
   setCaptureStripHidden,
 } from "./cardChrome.js";
-import { IdeaList } from "./listApp";
+import { PocketApp } from "./pocketApp";
+import { OPEN_ERROR } from "./sourcesPane";
 
 function bootSdk(): void {
   try {
@@ -147,7 +149,7 @@ if (listRoot && status instanceof HTMLElement) {
     /* Skip BackButton if !isAvailable */
   }
   createRoot(listRoot).render(
-    <IdeaList
+    <PocketApp
       getInitData={readInitData}
       onCopy={(text) => {
         void onCopy(text);
@@ -162,6 +164,12 @@ if (listRoot && status instanceof HTMLElement) {
       }}
       onDeleteError={() => {
         applyStatus(status, deleteStatus(false));
+      }}
+      onSaveError={() => {
+        applyStatus(status, saveStatus(false));
+      }}
+      onOpenError={() => {
+        applyStatus(status, { text: OPEN_ERROR, destructive: true });
       }}
       appearance={readAppearance()}
       onCardOpenChange={(open, close) => {

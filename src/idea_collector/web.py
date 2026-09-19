@@ -3,12 +3,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from aiohttp import web
+from aiohttp import ContentTypeError, web
 
 from idea_collector.auth import AuthError, init_data_from_headers, require_operator
 from idea_collector.capture import capture_payload, capture_text
 from idea_collector.config import Config
-from idea_collector.db import IdeaStore
+from idea_collector.db import IdeaStore, Source, SourceStore
 from idea_collector.enrich import Enricher
 from idea_collector.shelves import group_by_shelf
 
@@ -61,6 +61,9 @@ def create_web_app(
     app.router.add_get("/api/ideas", handle_list_ideas)
     app.router.add_post("/api/ideas", handle_create_idea)
     app.router.add_delete("/api/ideas/{id}", handle_delete_idea)
+    app.router.add_get("/api/sources", handle_list_sources)
+    app.router.add_post("/api/sources", handle_create_source)
+    app.router.add_delete("/api/sources/{id}", handle_delete_source)
     assets = webapp_assets_dir()
     if assets is not None:
         app.router.add_static("/assets", assets)
@@ -163,3 +166,60 @@ async def handle_delete_idea(request: web.Request) -> web.StreamResponse:
     if not removed:
         return _json_error(404, "not found")
     return web.json_response({"count": count})
+
+
+def _source_payload(source: Source) -> dict[str, int | str]:
+    return {"id": source.id, "title": source.title, "url": source.url}
+
+
+async def handle_list_sources(request: web.Request) -> web.StreamResponse:
+    try:
+        _operator_from_request(request)
+    except AuthError as exc:
+        return _json_error(exc.status, exc.message)
+    store = request.app[STORE_KEY]
+    sources = SourceStore(store).list_all()
+    return web.json_response({"sources": [_source_payload(item) for item in sources]})
+
+
+async def _read_source_fields(request: web.Request) -> tuple[str, str]:
+    try:
+        payload = await request.json()
+    except (json.JSONDecodeError, ContentTypeError, ValueError, UnicodeDecodeError):
+        return "", ""
+    if not isinstance(payload, dict):
+        return "", ""
+    title = payload.get("title", "")
+    url = payload.get("url", "")
+    title_text = title.strip() if isinstance(title, str) else ""
+    url_text = url.strip() if isinstance(url, str) else ""
+    return title_text, url_text
+
+
+async def handle_create_source(request: web.Request) -> web.StreamResponse:
+    store = request.app[STORE_KEY]
+    try:
+        _operator_from_request(request)
+        title, url = await _read_source_fields(request)
+    except AuthError as exc:
+        return _json_error(exc.status, exc.message)
+    if not title or not url:
+        return _json_error(400, "Не удалось сохранить")
+    source = SourceStore(store).insert(title, url)
+    return web.json_response(_source_payload(source))
+
+
+async def handle_delete_source(request: web.Request) -> web.StreamResponse:
+    try:
+        _operator_from_request(request)
+    except AuthError as exc:
+        return _json_error(exc.status, exc.message)
+    try:
+        source_id = int(request.match_info["id"])
+    except (TypeError, ValueError):
+        return _json_error(400, "invalid id")
+    store = request.app[STORE_KEY]
+    removed = SourceStore(store).delete(source_id)
+    if not removed:
+        return _json_error(404, "not found")
+    return web.json_response({"ok": True})

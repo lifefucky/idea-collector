@@ -7,6 +7,7 @@ import {
   bindCopy,
   copyStatus,
   deleteFetchOutcome,
+  sourceDeleteOutcome,
   deleteStatus,
   nextFieldText,
   saveStatus,
@@ -18,6 +19,7 @@ import {
   setCaptureStripHidden,
 } from "../webapp/src/cardChrome.js";
 import { selectedAfterFetch, selectedAfterLoad } from "../webapp/src/ideaCard.js";
+import { openSourceUrl } from "../webapp/src/sourceLink.js";
 
 const failures = [];
 
@@ -114,6 +116,62 @@ assertDeleteOutcome(
   { count: false, close: false, error: true },
   "throw stays with error",
 );
+
+function assertSourceDeleteOutcome(response, expected, message) {
+  const actual = sourceDeleteOutcome(response);
+  assertEqual(actual.remove, expected.remove, `${message} remove`);
+  assertEqual(actual.error, expected.error, `${message} error`);
+}
+assertSourceDeleteOutcome(
+  { ok: true, status: 200 },
+  { remove: true, error: false },
+  "source 200 removes",
+);
+assertSourceDeleteOutcome(
+  { ok: false, status: 404 },
+  { remove: true, error: false },
+  "source 404 removes",
+);
+assertSourceDeleteOutcome(
+  { ok: false, status: 500 },
+  { remove: false, error: true },
+  "source 5xx stays with error",
+);
+assertSourceDeleteOutcome(
+  null,
+  { remove: false, error: true },
+  "source throw stays with error",
+);
+
+const linkCalls = [];
+const availableOpenLink = Object.assign((url) => linkCalls.push(url), {
+  isAvailable: () => true,
+});
+const unavailableOpenLink = Object.assign((url) => linkCalls.push(`sdk:${url}`), {
+  isAvailable: () => false,
+});
+const openedWindows = [];
+globalThis.window = {
+  open(url, target, features) {
+    openedWindows.push({ url, target, features });
+    return { stub: true };
+  },
+};
+openSourceUrl("https://available.example", availableOpenLink);
+assertEqual(linkCalls.join(","), "https://available.example", "openLink when available");
+assertEqual(openedWindows.length, 0, "window.open unused when openLink available");
+openSourceUrl("https://fallback.example", unavailableOpenLink);
+assertEqual(openedWindows[0]?.url, "https://fallback.example", "window.open when unavailable");
+assertEqual(openedWindows[0]?.target, "_blank", "window.open target");
+assertEqual(openedWindows[0]?.features, "noopener", "window.open noopener");
+globalThis.window.open = () => null;
+let openThrew = false;
+try {
+  openSourceUrl("https://blocked.example", unavailableOpenLink);
+} catch {
+  openThrew = true;
+}
+assertEqual(openThrew, true, "falsy window.open throws");
 
 const originalFetch = globalThis.fetch;
 

@@ -45,6 +45,19 @@ export function deleteFetchOutcome(response) {
   return { count: false, close: false, error: true };
 }
 
+export function sourceDeleteOutcome(response) {
+  if (!response) {
+    return { remove: false, error: true };
+  }
+  if (response.ok) {
+    return { remove: true, error: false };
+  }
+  if (response.status === 404) {
+    return { remove: true, error: false };
+  }
+  return { remove: false, error: true };
+}
+
 export function applyStatus(statusEl, result) {
   if (!result.text) {
     statusEl.hidden = true;
