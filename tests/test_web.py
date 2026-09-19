@@ -377,5 +377,79 @@ def test_copy_repeat_offline_client_contract() -> None:
     list_app = (ROOT / "webapp" / "src" / "listApp.tsx").read_text(encoding="utf-8")
     assert "onContextMenu={() => undefined}" in list_app
     assert "preventDefault" not in list_app
+    assert "onCopy(idea.copy)" not in list_app
     assert "Скопировано" in capture
     assert "disabled" not in index.split("capture-field")[1].split("textarea")[0]
+
+
+def test_idea_card_open_does_not_copy() -> None:
+    list_app = (ROOT / "webapp" / "src" / "listApp.tsx").read_text(encoding="utf-8")
+    main = (ROOT / "webapp" / "src" / "main.tsx").read_text(encoding="utf-8")
+    index = INDEX.read_text(encoding="utf-8")
+    body_html = index.split("<body>", 1)[1].split("<script", 1)[0]
+    row = list_app.split('className="idea-row"', 1)[1].split("</Cell>", 1)[0]
+    assert "selectedIdea" in list_app
+    assert "onClick={() => openCard(idea)}" in row
+    assert "onCopy" not in row
+    assert "idea-card-header" in list_app
+    assert "selectedIdea.label" in list_app
+    assert "selectedIdea.copy" in list_app
+    assert "capture-strip" in main
+    assert "setCaptureStripHidden" in main
+    chrome = (ROOT / "webapp" / "src" / "cardChrome.js").read_text(encoding="utf-8")
+    assert "strip.hidden = open" in chrome
+    assert "#capture-strip[hidden]" in index
+    assert 'id="capture-field"' in body_html
+    assert "idea-card-header" not in body_html
+    assert "44pt" in index
+    assert "text-overflow: ellipsis" in index
+    assert "white-space: pre-wrap" in index
+
+
+def test_idea_card_body_copy_contract() -> None:
+    list_app = (ROOT / "webapp" / "src" / "listApp.tsx").read_text(encoding="utf-8")
+    main = (ROOT / "webapp" / "src" / "main.tsx").read_text(encoding="utf-8")
+    capture = (ROOT / "webapp" / "src" / "capture.js").read_text(encoding="utf-8")
+    body = list_app.split('className="idea-card-body"', 1)[1].split("</Tappable>", 1)[0]
+    assert "onCopy(selectedIdea.copy)" in body
+    assert "ignoreBodyCopy" in body
+    assert "bindCopy" in main
+    assert "navigator.clipboard" in capture
+    assert "Скопировано" in capture
+    assert "Не удалось скопировать" in capture
+    assert "Удалить" not in capture
+    assert "Удалить" not in list_app
+    assert "copy button" not in list_app.lower()
+
+
+def test_idea_card_back_contract() -> None:
+    list_app = (ROOT / "webapp" / "src" / "listApp.tsx").read_text(encoding="utf-8")
+    main = (ROOT / "webapp" / "src" / "main.tsx").read_text(encoding="utf-8")
+    assert "closeCard" in list_app
+    assert "onClick={closeCard}" in list_app
+    assert "backButton.mount" in main
+    assert "backButton.mount.isAvailable()" in main
+    chrome = (ROOT / "webapp" / "src" / "cardChrome.js").read_text(encoding="utf-8")
+    assert "api.show.isAvailable()" in chrome
+    assert "api.hide.isAvailable()" in chrome
+    assert "api.onClick.isAvailable()" in chrome
+    assert "getClose()()" in chrome
+    assert "closeIdeaCard" in main
+    assert "history.back" not in list_app
+    assert "history.back" not in main
+    assert "pushState" not in list_app
+    assert "pushState" not in main
+
+
+def test_idea_card_enrich_while_open_contract() -> None:
+    list_app = (ROOT / "webapp" / "src" / "listApp.tsx").read_text(encoding="utf-8")
+    after_load = list_app.split("const load = useCallback", 1)[1]
+    load = after_load.split("}, [getInitData]);", 1)[0]
+    assert '"ideas:changed"' in list_app
+    assert "if (!response.ok)" in load
+    assert "return;" in load.split("if (!response.ok)", 1)[1].split("}", 1)[0]
+    assert "selectedAfterLoad" in load
+    assert "keep current shelves (null = skeleton) and the open card" in load
+    idea_card = (ROOT / "webapp" / "src" / "ideaCard.js").read_text(encoding="utf-8")
+    assert "export function selectedAfterFetch" in idea_card
+    assert "return ideaById(shelves, selected.id) ?? null" in idea_card

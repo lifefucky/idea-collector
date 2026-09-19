@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import {
+  backButton,
   init,
   initDataRaw,
   isColorDark,
@@ -11,6 +12,11 @@ import {
 } from "@telegram-apps/sdk";
 import "@telegram-apps/telegram-ui/dist/styles.css";
 import { bindCaptureForm, bindCopy } from "./capture.js";
+import {
+  bindCardBackButton,
+  setBackButtonVisible,
+  setCaptureStripHidden,
+} from "./cardChrome.js";
 import { IdeaList } from "./listApp";
 
 function bootSdk(): void {
@@ -43,6 +49,13 @@ function bootSdk(): void {
     }
   } catch {
     /* first paint already showed the field */
+  }
+  try {
+    if (backButton.mount.isAvailable()) {
+      backButton.mount();
+    }
+  } catch {
+    /* Skip BackButton if !isAvailable */
   }
 }
 
@@ -121,6 +134,12 @@ if (
 
 if (listRoot && status instanceof HTMLElement) {
   const onCopy = bindCopy(status);
+  let closeIdeaCard = () => {};
+  try {
+    bindCardBackButton(backButton, () => closeIdeaCard);
+  } catch {
+    /* Skip BackButton if !isAvailable */
+  }
   createRoot(listRoot).render(
     <IdeaList
       getInitData={readInitData}
@@ -128,6 +147,15 @@ if (listRoot && status instanceof HTMLElement) {
         void onCopy(text);
       }}
       appearance={readAppearance()}
+      onCardOpenChange={(open, close) => {
+        closeIdeaCard = close;
+        setCaptureStripHidden(document.getElementById("capture-strip"), open);
+        try {
+          setBackButtonVisible(backButton, open);
+        } catch {
+          /* Skip BackButton if !isAvailable */
+        }
+      }}
     />,
   );
 }
