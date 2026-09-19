@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from aiogram import Bot, Dispatcher, F, Router
 from aiogram.exceptions import TelegramAPIError
-from aiogram.filters import CommandStart
+from aiogram.filters import Command, CommandStart
 from aiogram.types import (
+    BufferedInputFile,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     MenuButtonWebApp,
@@ -13,6 +16,7 @@ from aiogram.types import (
 
 from idea_collector.capture import CaptureResult, capture_text
 from idea_collector.config import Config
+from idea_collector.csv_export import csv_bytes, csv_filename
 from idea_collector.db import IdeaStore
 from idea_collector.enrich import Enricher
 
@@ -73,6 +77,25 @@ async def on_start(message: Message, config: Config) -> None:
         return
     keyboard = _web_app_keyboard(config)
     await message.answer("Карман", reply_markup=keyboard)
+
+
+@router.message(Command("csv"))
+async def on_csv(message: Message, config: Config, store: IdeaStore) -> None:
+    user = message.from_user
+    if user is None or user.id != config.operator_telegram_id:
+        return
+    ideas = store.list_all()
+    try:
+        if not ideas:
+            await message.answer("В кармане нет идей")
+            return
+        document = BufferedInputFile(
+            csv_bytes(ideas),
+            filename=csv_filename(datetime.now(UTC)),
+        )
+        await message.answer_document(document)
+    except TelegramAPIError:
+        return
 
 
 @router.message(F.text)

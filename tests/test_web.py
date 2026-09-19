@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import csv
+import io
 import sqlite3
 import subprocess
 import time
@@ -11,9 +13,10 @@ from typing import Any
 import pytest
 from aiogram import Bot
 from aiogram.client.session.base import BaseSession
-from aiogram.methods import TelegramMethod
+from aiogram.exceptions import TelegramAPIError
+from aiogram.methods import SendDocument, TelegramMethod
 from aiogram.methods.base import TelegramType
-from aiogram.types import Chat
+from aiogram.types import BufferedInputFile, Chat
 from aiogram.types import Message as TelegramMessage
 from aiohttp.test_utils import TestClient, TestServer
 
@@ -165,6 +168,8 @@ class RecordingSession(BaseSession):
     def __init__(self) -> None:
         super().__init__()
         self.replies: list[str] = []
+        self.documents: list[tuple[str, bytes]] = []
+        self.fail = False
 
     async def close(self) -> None:
         return None
@@ -175,9 +180,17 @@ class RecordingSession(BaseSession):
         method: TelegramMethod[TelegramType],
         timeout: int | None = None,
     ) -> TelegramType:
+        if isinstance(method, SendDocument) and isinstance(
+            method.document, BufferedInputFile
+        ):
+            self.documents.append(
+                (method.document.filename or "", method.document.data)
+            )
         text = getattr(method, "text", None)
         if isinstance(text, str):
             self.replies.append(text)
+        if self.fail:
+            raise TelegramAPIError(method=method, message="fail")
         return TelegramMessage(  # type: ignore[return-value]
             message_id=1,
             date=datetime.now(UTC),
@@ -206,7 +219,7 @@ async def test_bot_on_text_stores_ack_and_skips_slash(
     dispatcher = create_dispatcher(config, store, enricher)
     now = int(time.time())
 
-    async def feed(text: str, update_id: int) -> None:
+    async def feed(text: str, update_id: int, user_id: int = OPERATOR_ID) -> None:
         await dispatcher.feed_raw_update(
             bot,
             {
@@ -214,9 +227,9 @@ async def test_bot_on_text_stores_ack_and_skips_slash(
                 "message": {
                     "message_id": update_id,
                     "date": now,
-                    "chat": {"id": OPERATOR_ID, "type": "private"},
+                    "chat": {"id": user_id, "type": "private"},
                     "from": {
-                        "id": OPERATOR_ID,
+                        "id": user_id,
                         "is_bot": False,
                         "first_name": "Op",
                     },
@@ -227,12 +240,73 @@ async def test_bot_on_text_stores_ack_and_skips_slash(
 
     try:
         await feed("/start", 1)
+        session.replies.clear()
+        session.documents.clear()
         await feed("/csv", 2)
         assert store.count() == 0
-        await feed("from chat", 3)
+        assert session.replies == ["В кармане нет идей"]
+        assert session.documents == []
+
+        await feed("/foo", 3)
+        assert store.count() == 0
+        assert session.replies == ["В кармане нет идей"]
+        assert session.documents == []
+
+        await feed("/csv", 4, user_id=999)
+        assert store.count() == 0
+        assert session.replies == ["В кармане нет идей"]
+        assert session.documents == []
+
+        await feed("from chat", 5)
         assert store.count() == 1
         assert store.list_all()[0].raw_text == "from chat"
         assert "1" in session.replies
+
+        quoted, _ = store.insert("quoted raw")
+        store.update_enrichment(
+            quoted.id,
+            source="ProductHunt",
+            short_name="Заголовок, с запятой",
+            description='Строка1\nСтрока2, и "кавычки"',
+        )
+        count_before = store.count()
+        replies_before = list(session.replies)
+        documents_before = list(session.documents)
+        await feed("/csv", 6, user_id=999)
+        assert store.count() == count_before
+        assert session.replies == replies_before
+        assert session.documents == documents_before
+
+        session.replies.clear()
+        session.documents.clear()
+        expected_name = f"ideas-{datetime.now(UTC).date().isoformat()}.csv"
+        await feed("/csv", 7)
+        assert store.count() == count_before
+        assert session.replies == []
+        assert len(session.documents) == 1
+        filename, payload = session.documents[0]
+        assert filename == expected_name
+        assert not payload.startswith(b"\xef\xbb\xbf")
+        rows = list(csv.reader(io.StringIO(payload.decode("utf-8"))))
+        assert rows[0] == ["title", "description"]
+        assert rows[1] == ["from chat", "from chat"]
+        assert rows[2] == ["Заголовок, с запятой", 'Строка1\nСтрока2, и "кавычки"']
+        assert all(len(row) == 2 for row in rows)
+
+        session.fail = True
+        session.replies.clear()
+        session.documents.clear()
+        await feed("/csv", 8)
+        assert store.count() == count_before
+        assert session.replies == []
+
+        for idea in store.list_all():
+            store.delete(idea.id)
+        session.replies.clear()
+        session.documents.clear()
+        await feed("/csv", 9)
+        assert store.count() == 0
+        assert session.documents == []
     finally:
         await enricher.drain()
         await bot.session.close()
