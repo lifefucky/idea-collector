@@ -5,7 +5,8 @@
 ## Возможности
 
 - Захват текста в Telegram-чате (отвечает числом сохранённых идей)
-- Mini App «Карман»: поле ввода, счётчик, полки и карточка идеи с копированием описания
+- Команда `/csv` в чате оператора: непустой карман → файл `ideas-YYYY-MM-DD.csv` (колонки `title` / `description`); пустой → `В кармане нет идей`. Sources в файл не входят
+- Mini App «Карман»: вкладки «Идеи | Sources», поле ввода, счётчик, полки и карточка идеи с копированием описания
 - Фоновая разметка через OpenAI-совместимый `/chat/completions`
 - SQLite-хранилище
 - Доступ только у `OPERATOR_TELEGRAM_ID`; Mini App проверяет Telegram `initData`
@@ -53,7 +54,7 @@ uv run --env-file .env idea-collector
 2. Укажите свой Telegram user id в `OPERATOR_TELEGRAM_ID` — сохранять идеи может только этот аккаунт.
 3. Направьте Mini App / Menu Button на `PUBLIC_BASE_URL` (HTTPS-origin, с которого отдаётся `/`). При старте, если URL задан, бот сам ставит кнопку меню «Карман».
 
-В чате `/start` открывает ту же кнопку. Любой не-командный текст от оператора сохраняется как идея.
+В чате `/start` открывает ту же кнопку. `/csv` отдаёт карман файлом (или сообщает, что идей нет). Любой не-командный текст от оператора сохраняется как идея.
 
 ## Переменные окружения
 
@@ -83,6 +84,9 @@ Mini App ходит на эти маршруты. JSON API требуют заг
 | `GET` | `/api/ideas` | `{ "count", "shelves" }` |
 | `POST` | `/api/ideas` | Тело JSON `{ "text": "…" }` или form-field `text` |
 | `DELETE` | `/api/ideas/{id}` | `{ "count": N }` оставшихся идей |
+| `GET` | `/api/sources` | `{ "sources": [{id, title, url}] }` |
+| `POST` | `/api/sources` | Тело JSON `{ "title": "…", "url": "…" }` |
+| `DELETE` | `/api/sources/{id}` | `{ "ok": true }` |
 | `GET` | `/assets/…` | Сборка Vite (`webapp/dist/assets`) |
 
 ## Разработка

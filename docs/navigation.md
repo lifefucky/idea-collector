@@ -8,7 +8,7 @@
 |---|---|
 | [docs/navigation.md](navigation.md) | Эта карта файлов. |
 | [docs/backlog.md](backlog.md) | Идеи на следующий срез (карточка, удаление, промпты, Docker, `/csv`, Sources). Не контракт v1. |
-| [README.md](../README.md) | Запуск, переменные окружения, HTTP API, стек. |
+| [README.md](../README.md) | Запуск, переменные окружения, HTTP API, `/csv`, стек. |
 
 ## Корень репозитория
 
@@ -32,11 +32,12 @@
 | [src/idea_collector/__init__.py](../src/idea_collector/__init__.py) | Пакет «Telegram idea pocket». |
 | [src/idea_collector/__main__.py](../src/idea_collector/__main__.py) | Старт процесса: конфиг, SQLite, LLM, HTTP `0.0.0.0:$PORT`, long polling бота. |
 | [src/idea_collector/config.py](../src/idea_collector/config.py) | Чтение окружения; ошибка, если нет обязательных переменных. |
-| [src/idea_collector/bot.py](../src/idea_collector/bot.py) | Aiogram: `/start` с кнопкой Mini App, захват текста в чате, кнопка меню «Карман». |
-| [src/idea_collector/web.py](../src/idea_collector/web.py) | Aiohttp: HTML Mini App, `/api/count`, `GET`/`POST /api/ideas`, `DELETE /api/ideas/{id}`, статика `/assets`. |
+| [src/idea_collector/bot.py](../src/idea_collector/bot.py) | Aiogram: `/start` с кнопкой Mini App, `/csv`, захват текста в чате, кнопка меню «Карман». |
+| [src/idea_collector/csv_export.py](../src/idea_collector/csv_export.py) | Байты CSV кармана: колонки `title`/`description` (`label`/`copy`), имя `ideas-YYYY-MM-DD.csv`. |
+| [src/idea_collector/web.py](../src/idea_collector/web.py) | Aiohttp: HTML Mini App, `/api/count`, `GET`/`POST /api/ideas`, `DELETE /api/ideas/{id}`, `GET`/`POST /api/sources`, `DELETE /api/sources/{id}`, статика `/assets`. |
 | [src/idea_collector/auth.py](../src/idea_collector/auth.py) | Проверка Telegram `initData` (HMAC) и что пользователь — оператор. |
 | [src/idea_collector/capture.py](../src/idea_collector/capture.py) | Общий захват: только оператор, insert в SQLite, постановка в очередь разметки. |
-| [src/idea_collector/db.py](../src/idea_collector/db.py) | SQLite `IdeaStore`: схема `ideas`, insert / count / list / get / delete / update_enrichment. |
+| [src/idea_collector/db.py](../src/idea_collector/db.py) | SQLite `IdeaStore` (`ideas`: insert / count / list / get / delete / update_enrichment) и `SourceStore` (`sources`: insert / list / get / delete). |
 | [src/idea_collector/enrich.py](../src/idea_collector/enrich.py) | Фоновая задача: LLM → полка, short_name, description в уже сохранённую строку. |
 | [src/idea_collector/llm.py](../src/idea_collector/llm.py) | Вызов OpenAI-совместимого `/chat/completions` и разбор JSON извлечения. |
 | [src/idea_collector/shelves.py](../src/idea_collector/shelves.py) | Нормализация имени полки, представление идеи для API, группировка списка по полкам. |
@@ -54,7 +55,10 @@ Vite + React. Сборка `webapp/dist` отдаётся бэкендом.
 | [webapp/tsconfig.json](../webapp/tsconfig.json) | TypeScript для `webapp/src` (JSX, strict). |
 | [webapp/tsconfig.node.json](../webapp/tsconfig.node.json) | Project reference на основной tsconfig. |
 | [webapp/index.html](../webapp/index.html) | Оболочка Mini App: поле захвата, счётчик, слот списка, стили темы Telegram. |
-| [webapp/src/main.tsx](../webapp/src/main.tsx) | Точка входа: SDK Telegram, тема, форма захвата, монтирование списка. |
+| [webapp/src/main.tsx](../webapp/src/main.tsx) | Точка входа: SDK Telegram, тема, форма захвата, монтирование `PocketApp`. |
+| [webapp/src/pocketApp.tsx](../webapp/src/pocketApp.tsx) | Таббар «Идеи \| Sources»; `IdeaList` остаётся смонтированным при смене вкладки. |
+| [webapp/src/sourcesPane.tsx](../webapp/src/sourcesPane.tsx) | Список Sources: оверлей «+», тап открывает url, удаление со строки. |
+| [webapp/src/sourceLink.js](../webapp/src/sourceLink.js) | Открытие url источника через SDK `openLink` или `window.open`. |
 | [webapp/src/listApp.tsx](../webapp/src/listApp.tsx) | Полки и строки идей; тап открывает карточку с копированием описания и удалением. |
 | [webapp/src/capture.js](../webapp/src/capture.js) | POST `/api/ideas`, счётчик, статусы «сохранено» / «скопировано» / «не удалось удалить». |
 | [webapp/src/ideaCard.js](../webapp/src/ideaCard.js) | Поиск идеи по id и сохранение выбранной карточки после перезагрузки списка. |
@@ -68,8 +72,8 @@ Vite + React. Сборка `webapp/dist` отдаётся бэкендом.
 | [tests/__init__.py](../tests/__init__.py) | Маркер пакета тестов. |
 | [tests/conftest.py](../tests/conftest.py) | Фикстуры: тестовый `Config` и `IdeaStore` в памяти. |
 | [tests/helpers.py](../tests/helpers.py) | Сборка конфига и подпись `initData` для API-тестов. |
-| [tests/test_web.py](../tests/test_web.py) | HTTP API, auth Mini App, захват через бота. |
-| [tests/test_db.py](../tests/test_db.py) | SQLite и загрузка конфига. |
+| [tests/test_web.py](../tests/test_web.py) | HTTP API идей и Sources, auth Mini App, захват и `/csv` через бота. |
+| [tests/test_db.py](../tests/test_db.py) | SQLite `IdeaStore` / `SourceStore` и загрузка конфига. |
 | [tests/test_llm.py](../tests/test_llm.py) | Промпт, разбор ответа LLM, очередь Enricher. |
 | [tests/test_shelves.py](../tests/test_shelves.py) | Алиасы полок, группировка, поля `label` / `copy`. |
 | [tests/capture_probe.mjs](../tests/capture_probe.mjs) | Node-пробы UI-хелперов захвата, карточки и BackButton (без браузера). |
@@ -84,7 +88,7 @@ Vite + React. Сборка `webapp/dist` отдаётся бэкендом.
 | `_bmad-output/specs/spec-telegram-idea-pocket/shelves.md` | Исходные правила полок (копия живёт в `src/.../shelves.md`). |
 | `_bmad-output/implementation-artifacts/spec-v1-telegram-idea-pocket.md` | Спека реализации v1 кармана. |
 | `_bmad-output/implementation-artifacts/spec-idea-card-delete.md` | Спека карточки идеи. |
-| `_bmad-output/implementation-artifacts/deferred-work.md` | Отложенное: `/csv`, Sources, delete API. |
+| `_bmad-output/implementation-artifacts/deferred-work.md` | Отложенное: CSV-юнит-тесты, click-раннер Mini App, призрачная строка после delete. |
 | `_bmad-output/planning-artifacts/ux-designs/ux-idea-collector-2026-09-18/DESIGN.md` | Визуал Mini App (токены Telegram). |
 | `_bmad-output/planning-artifacts/ux-designs/ux-idea-collector-2026-09-18/EXPERIENCE.md` | Поведение чата и Mini App. |
 | `_bmad-output/forge/telegram-idea-pocket/forged-idea.md` | Закалённая идея продукта. |
