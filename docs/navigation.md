@@ -33,10 +33,10 @@
 | [src/idea_collector/__main__.py](../src/idea_collector/__main__.py) | Старт процесса: конфиг, SQLite, LLM, HTTP `0.0.0.0:$PORT`, long polling бота. |
 | [src/idea_collector/config.py](../src/idea_collector/config.py) | Чтение окружения; ошибка, если нет обязательных переменных. |
 | [src/idea_collector/bot.py](../src/idea_collector/bot.py) | Aiogram: `/start` с кнопкой Mini App, захват текста в чате, кнопка меню «Карман». |
-| [src/idea_collector/web.py](../src/idea_collector/web.py) | Aiohttp: HTML Mini App, `/api/count`, `GET`/`POST /api/ideas`, статика `/assets`. |
+| [src/idea_collector/web.py](../src/idea_collector/web.py) | Aiohttp: HTML Mini App, `/api/count`, `GET`/`POST /api/ideas`, `DELETE /api/ideas/{id}`, статика `/assets`. |
 | [src/idea_collector/auth.py](../src/idea_collector/auth.py) | Проверка Telegram `initData` (HMAC) и что пользователь — оператор. |
 | [src/idea_collector/capture.py](../src/idea_collector/capture.py) | Общий захват: только оператор, insert в SQLite, постановка в очередь разметки. |
-| [src/idea_collector/db.py](../src/idea_collector/db.py) | SQLite `IdeaStore`: схема `ideas`, insert / count / list / get / update_enrichment. |
+| [src/idea_collector/db.py](../src/idea_collector/db.py) | SQLite `IdeaStore`: схема `ideas`, insert / count / list / get / delete / update_enrichment. |
 | [src/idea_collector/enrich.py](../src/idea_collector/enrich.py) | Фоновая задача: LLM → полка, short_name, description в уже сохранённую строку. |
 | [src/idea_collector/llm.py](../src/idea_collector/llm.py) | Вызов OpenAI-совместимого `/chat/completions` и разбор JSON извлечения. |
 | [src/idea_collector/shelves.py](../src/idea_collector/shelves.py) | Нормализация имени полки, представление идеи для API, группировка списка по полкам. |
@@ -55,8 +55,8 @@ Vite + React. Сборка `webapp/dist` отдаётся бэкендом.
 | [webapp/tsconfig.node.json](../webapp/tsconfig.node.json) | Project reference на основной tsconfig. |
 | [webapp/index.html](../webapp/index.html) | Оболочка Mini App: поле захвата, счётчик, слот списка, стили темы Telegram. |
 | [webapp/src/main.tsx](../webapp/src/main.tsx) | Точка входа: SDK Telegram, тема, форма захвата, монтирование списка. |
-| [webapp/src/listApp.tsx](../webapp/src/listApp.tsx) | Полки и строки идей; тап открывает карточку с копированием описания. |
-| [webapp/src/capture.js](../webapp/src/capture.js) | POST `/api/ideas`, счётчик, статусы «сохранено» / «скопировано». |
+| [webapp/src/listApp.tsx](../webapp/src/listApp.tsx) | Полки и строки идей; тап открывает карточку с копированием описания и удалением. |
+| [webapp/src/capture.js](../webapp/src/capture.js) | POST `/api/ideas`, счётчик, статусы «сохранено» / «скопировано» / «не удалось удалить». |
 | [webapp/src/ideaCard.js](../webapp/src/ideaCard.js) | Поиск идеи по id и сохранение выбранной карточки после перезагрузки списка. |
 | [webapp/src/cardChrome.js](../webapp/src/cardChrome.js) | Скрытие полосы захвата на карточке и Telegram BackButton. |
 | [webapp/src/vite-env.d.ts](../webapp/src/vite-env.d.ts) | Типы клиента Vite. |

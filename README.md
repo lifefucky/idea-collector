@@ -82,6 +82,7 @@ Mini App ходит на эти маршруты. JSON API требуют заг
 | `GET` | `/api/count` | `{ "count": N }` |
 | `GET` | `/api/ideas` | `{ "count", "shelves" }` |
 | `POST` | `/api/ideas` | Тело JSON `{ "text": "…" }` или form-field `text` |
+| `DELETE` | `/api/ideas/{id}` | `{ "count": N }` оставшихся идей |
 | `GET` | `/assets/…` | Сборка Vite (`webapp/dist/assets`) |
 
 ## Разработка

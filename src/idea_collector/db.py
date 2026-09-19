@@ -120,6 +120,18 @@ class IdeaStore:
             )
             self._conn.commit()
 
+    def delete(self, idea_id: int) -> tuple[bool, int]:
+        with self._lock:
+            cursor = self._conn.execute(
+                "DELETE FROM ideas WHERE id = ?",
+                (idea_id,),
+            )
+            self._conn.commit()
+            removed = cursor.rowcount > 0
+            row = self._conn.execute("SELECT COUNT(*) AS n FROM ideas").fetchone()
+            count = int(row["n"])
+        return removed, count
+
     def close(self) -> None:
         with self._lock:
             self._conn.close()

@@ -418,8 +418,132 @@ def test_idea_card_body_copy_contract() -> None:
     assert "Скопировано" in capture
     assert "Не удалось скопировать" in capture
     assert "Удалить" not in capture
-    assert "Удалить" not in list_app
+    assert "Удалить" not in body
+    assert "Удалить" in list_app
     assert "copy button" not in list_app.lower()
+
+
+@pytest.mark.asyncio
+async def test_delete_idea_operator_count_and_errors(client, store: IdeaStore) -> None:
+    first, _ = store.insert("keep")
+    gone, _ = store.insert("gone")
+    store.update_enrichment(
+        gone.id,
+        source="ProductHunt",
+        short_name="Gone",
+        description="copy",
+    )
+    unauth = await client.delete(f"/api/ideas/{gone.id}")
+    assert unauth.status == 401
+    assert store.get(gone.id) is not None
+    forbidden = await client.delete(
+        f"/api/ideas/{gone.id}",
+        headers=_auth_headers(user_id=7),
+    )
+    assert forbidden.status == 403
+    assert store.get(gone.id) is not None
+    forged = await client.delete(
+        f"/api/ideas/{gone.id}",
+        headers={"Authorization": "tma user=%7B%22id%22%3A42%7D&hash=dead"},
+    )
+    assert forged.status == 401
+    missing = await client.delete("/api/ideas/999999", headers=_auth_headers())
+    assert missing.status == 404
+    assert "error" in await missing.json()
+    assert store.count() == 2
+    bad_id = await client.delete("/api/ideas/not-an-id", headers=_auth_headers())
+    assert bad_id.status == 400
+    ok = await client.delete(f"/api/ideas/{gone.id}", headers=_auth_headers())
+    assert ok.status == 200
+    assert await ok.json() == {"count": 1}
+    listed = await client.get("/api/ideas", headers=_auth_headers())
+    body = await listed.json()
+    assert body["count"] == 1
+    assert [shelf["name"] for shelf in body["shelves"]] == [OWN_SHELF]
+    last = await client.delete(f"/api/ideas/{first.id}", headers=_auth_headers())
+    assert last.status == 200
+    assert await last.json() == {"count": 0}
+    empty = await client.get("/api/ideas", headers=_auth_headers())
+    empty_body = await empty.json()
+    assert empty_body["count"] == 0
+    assert empty_body["shelves"] == []
+
+
+@pytest.mark.asyncio
+async def test_delete_returns_404_when_remove_fails(config, enricher: Enricher) -> None:
+    class MissStore(IdeaStore):
+        def delete(self, idea_id: int) -> tuple[bool, int]:
+            return False, super().count()
+
+    store = MissStore(":memory:")
+    idea, _ = store.insert("still there")
+    app = create_web_app(config, store, enricher)
+    server = TestServer(app)
+    test_client = TestClient(server)
+    await test_client.start_server()
+    try:
+        response = await test_client.delete(
+            f"/api/ideas/{idea.id}",
+            headers=_auth_headers(),
+        )
+        assert response.status == 404
+        assert "error" in await response.json()
+        assert store.get(idea.id) is not None
+    finally:
+        await test_client.close()
+        store.close()
+
+
+def test_idea_card_delete_contract() -> None:
+    list_app = (ROOT / "webapp" / "src" / "listApp.tsx").read_text(encoding="utf-8")
+    main = (ROOT / "webapp" / "src" / "main.tsx").read_text(encoding="utf-8")
+    capture = (ROOT / "webapp" / "src" / "capture.js").read_text(encoding="utf-8")
+    index = INDEX.read_text(encoding="utf-8")
+    body_html = index.split("<body>", 1)[1].split("<script", 1)[0]
+    body = list_app.split('className="idea-card-body"', 1)[1].split("</Tappable>", 1)[0]
+    after_body = list_app.split("</Tappable>", 1)[1].split(") : (", 1)[0]
+    row = list_app.split('className="idea-row"', 1)[1].split("</Cell>", 1)[0]
+    delete_css = index.split("button.idea-card-delete", 1)[1].split("}", 1)[0]
+    handler = list_app.split("const deleteSelected = useCallback", 1)[1].split(
+        "}, [closeCard, getInitData, load, onCount, onDeleteClear,"
+        " onDeleteError, selectedIdea]);",
+        1,
+    )[0]
+    assert "Удалить" not in body
+    assert "Удалить" not in capture
+    assert "Удалить" not in row
+    assert "Удалить" not in body_html
+    assert "Удалить" in after_body
+    assert after_body.find("</Section>") < after_body.find("Удалить")
+    assert 'className="idea-card-delete"' in after_body
+    assert "<Button" in after_body
+    assert 'from "@telegram-apps/telegram-ui"' in list_app
+    assert "Button" in list_app.split('from "@telegram-apps/telegram-ui"', 1)[0]
+    assert "44pt" in delete_css
+    assert "destructive" in delete_css
+    assert "button.idea-card-delete" in index
+    assert 'method: "DELETE"' in handler
+    assert "deleteFetchOutcome(response)" in handler
+    assert "deleteFetchOutcome(null)" in handler
+    assert "onCount(body.count)" in handler
+    assert "onDeleteClear()" in handler
+    assert "closeCard()" in handler
+    assert "await load()" in handler
+    assert "onDeleteError()" in handler
+    assert "if (deleteInFlight.current || selectedIdea === null)" in handler
+    assert "deleteInFlight.current = true" in handler
+    assert "onCount" in main
+    assert "onDeleteClear" in main
+    assert "onDeleteError" in main
+    assert "deleteStatus(true)" in main
+    assert "deleteStatus(false)" in main
+    assert "setIdeasCounter" in main
+    assert "DELETE_ERROR" in capture
+    assert "setIdeasCounter" in capture
+    assert "export function deleteFetchOutcome" in capture
+    assert "history.back" not in handler
+    assert "confirm" not in handler.lower()
+    assert "undo" not in handler.lower()
 
 
 def test_idea_card_back_contract() -> None:

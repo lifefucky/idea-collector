@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Accordion, AppRoot, Cell, IconButton, Section, Tappable } from "@telegram-apps/telegram-ui";
+import { Accordion, AppRoot, Button, Cell, IconButton, Section, Tappable } from "@telegram-apps/telegram-ui";
 import { Icon24ChevronLeft } from "@telegram-apps/telegram-ui/dist/icons/24/chevron_left";
+import { deleteFetchOutcome } from "./capture.js";
 import { selectedAfterLoad } from "./ideaCard.js";
 
 type Idea = {
@@ -22,6 +23,9 @@ type IdeasResponse = {
 type IdeaListProps = {
   getInitData: () => string;
   onCopy: (text: string) => void;
+  onCount: (count: number) => void;
+  onDeleteClear: () => void;
+  onDeleteError: () => void;
   appearance: "light" | "dark";
   onCardOpenChange: (open: boolean, close: () => void) => void;
 };
@@ -29,6 +33,9 @@ type IdeaListProps = {
 export function IdeaList({
   getInitData,
   onCopy,
+  onCount,
+  onDeleteClear,
+  onDeleteError,
   appearance,
   onCardOpenChange,
 }: IdeaListProps) {
@@ -39,6 +46,7 @@ export function IdeaList({
   const ignoreBodyCopyTimer = useRef<ReturnType<typeof window.setTimeout> | undefined>(
     undefined,
   );
+  const deleteInFlight = useRef(false);
 
   const clearIgnoreBodyCopy = useCallback(() => {
     if (ignoreBodyCopyTimer.current !== undefined) {
@@ -82,6 +90,44 @@ export function IdeaList({
       /* keep current shelves (null = skeleton) and the open card */
     }
   }, [getInitData]);
+
+  const deleteSelected = useCallback(async () => {
+    if (deleteInFlight.current || selectedIdea === null) {
+      return;
+    }
+    deleteInFlight.current = true;
+    try {
+      let outcome;
+      try {
+        const response = await fetch(`/api/ideas/${selectedIdea.id}`, {
+          method: "DELETE",
+          headers: { Authorization: `tma ${getInitData()}` },
+        });
+        outcome = deleteFetchOutcome(response);
+        if (outcome.count) {
+          try {
+            const body = (await response.json()) as { count?: number };
+            if (typeof body.count === "number") {
+              onCount(body.count);
+            }
+          } catch {
+            /* still close so the operator is not on a missing card */
+          }
+        }
+      } catch {
+        outcome = deleteFetchOutcome(null);
+      }
+      if (outcome.close) {
+        onDeleteClear();
+        closeCard();
+        await load();
+        return;
+      }
+      onDeleteError();
+    } finally {
+      deleteInFlight.current = false;
+    }
+  }, [closeCard, getInitData, load, onCount, onDeleteClear, onDeleteError, selectedIdea]);
 
   useEffect(() => {
     void load();
@@ -152,6 +198,17 @@ export function IdeaList({
               {selectedIdea.copy}
             </Tappable>
           </Section>
+          <Button
+            type="button"
+            mode="plain"
+            size="l"
+            className="idea-card-delete"
+            onClick={() => {
+              void deleteSelected();
+            }}
+          >
+            Удалить
+          </Button>
         </div>
       ) : (
         <>

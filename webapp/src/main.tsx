@@ -11,7 +11,13 @@ import {
   themeParams,
 } from "@telegram-apps/sdk";
 import "@telegram-apps/telegram-ui/dist/styles.css";
-import { bindCaptureForm, bindCopy } from "./capture.js";
+import {
+  applyStatus,
+  bindCaptureForm,
+  bindCopy,
+  deleteStatus,
+  setIdeasCounter,
+} from "./capture.js";
 import {
   bindCardBackButton,
   setBackButtonVisible,
@@ -145,6 +151,17 @@ if (listRoot && status instanceof HTMLElement) {
       getInitData={readInitData}
       onCopy={(text) => {
         void onCopy(text);
+      }}
+      onCount={(count) => {
+        if (counter instanceof HTMLElement) {
+          setIdeasCounter(counter, count);
+        }
+      }}
+      onDeleteClear={() => {
+        applyStatus(status, deleteStatus(true));
+      }}
+      onDeleteError={() => {
+        applyStatus(status, deleteStatus(false));
       }}
       appearance={readAppearance()}
       onCardOpenChange={(open, close) => {

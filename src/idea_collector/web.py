@@ -60,6 +60,7 @@ def create_web_app(
     app.router.add_get("/api/count", handle_count)
     app.router.add_get("/api/ideas", handle_list_ideas)
     app.router.add_post("/api/ideas", handle_create_idea)
+    app.router.add_delete("/api/ideas/{id}", handle_delete_idea)
     assets = webapp_assets_dir()
     if assets is not None:
         app.router.add_static("/assets", assets)
@@ -146,3 +147,19 @@ async def handle_create_idea(request: web.Request) -> web.StreamResponse:
     if result.error or result.idea is None:
         return _json_error(500, result.error or "Не удалось сохранить")
     return web.json_response(capture_payload(result))
+
+
+async def handle_delete_idea(request: web.Request) -> web.StreamResponse:
+    try:
+        _operator_from_request(request)
+    except AuthError as exc:
+        return _json_error(exc.status, exc.message)
+    try:
+        idea_id = int(request.match_info["id"])
+    except (TypeError, ValueError):
+        return _json_error(400, "invalid id")
+    store = request.app[STORE_KEY]
+    removed, count = store.delete(idea_id)
+    if not removed:
+        return _json_error(404, "not found")
+    return web.json_response({"count": count})

@@ -1,6 +1,7 @@
 export const COPY_OK = "Скопировано";
 export const SAVE_ERROR = "Не удалось сохранить";
 export const COPY_ERROR = "Не удалось скопировать";
+export const DELETE_ERROR = "Не удалось удалить";
 
 export function nextFieldText(persisted, current) {
   return persisted ? "" : current;
@@ -20,7 +21,31 @@ export function copyStatus(ok) {
   return { text: COPY_ERROR, destructive: true };
 }
 
-function applyStatus(statusEl, result) {
+export function deleteStatus(ok) {
+  if (ok) {
+    return { text: "", destructive: false };
+  }
+  return { text: DELETE_ERROR, destructive: true };
+}
+
+export function setIdeasCounter(counter, count) {
+  counter.textContent = String(count);
+}
+
+export function deleteFetchOutcome(response) {
+  if (!response) {
+    return { count: false, close: false, error: true };
+  }
+  if (response.ok) {
+    return { count: true, close: true, error: false };
+  }
+  if (response.status === 404) {
+    return { count: false, close: true, error: false };
+  }
+  return { count: false, close: false, error: true };
+}
+
+export function applyStatus(statusEl, result) {
   if (!result.text) {
     statusEl.hidden = true;
     statusEl.textContent = "";
@@ -62,7 +87,7 @@ export function bindCaptureForm({
         try {
           const body = await response.json();
           if (typeof body.count === "number") {
-            counter.textContent = String(body.count);
+            setIdeasCounter(counter, body.count);
           }
         } catch {
           /* keep persisted true even if JSON parse fails */

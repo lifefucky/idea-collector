@@ -1,11 +1,16 @@
 import {
   COPY_ERROR,
   COPY_OK,
+  DELETE_ERROR,
+  applyStatus,
   bindCaptureForm,
   bindCopy,
   copyStatus,
+  deleteFetchOutcome,
+  deleteStatus,
   nextFieldText,
   saveStatus,
+  setIdeasCounter,
 } from "../webapp/src/capture.js";
 import {
   bindCardBackButton,
@@ -54,6 +59,61 @@ assertEqual(saveStatus(false).destructive, true, "persist fail is destructive");
 assertEqual(saveStatus(true).text, "", "persist success has no error line");
 assertEqual(copyStatus(true).text, COPY_OK, "copy success label");
 assertEqual(copyStatus(false).destructive, true, "copy fail is destructive");
+assertEqual(deleteStatus(false).text, DELETE_ERROR, "delete fail label");
+assertEqual(deleteStatus(false).destructive, true, "delete fail is destructive");
+assertEqual(deleteStatus(true).text, "", "delete success has no error line");
+const counterEl = { textContent: "2" };
+setIdeasCounter(counterEl, 0);
+assertEqual(counterEl.textContent, "0", "setIdeasCounter writes remaining count");
+const deleteStatusEl = {
+  hidden: true,
+  textContent: "",
+  classList: {
+    toggle(_name, on) {
+      deleteStatusEl.destructive = on;
+    },
+    remove() {},
+  },
+  destructive: false,
+};
+applyStatus(deleteStatusEl, deleteStatus(false));
+assertEqual(deleteStatusEl.textContent, DELETE_ERROR, "applyStatus shows delete error");
+assertEqual(deleteStatusEl.destructive, true, "applyStatus marks delete error destructive");
+applyStatus(deleteStatusEl, deleteStatus(true));
+assertEqual(deleteStatusEl.textContent, "", "deleteStatus(true) clears status text");
+assertEqual(deleteStatusEl.hidden, true, "deleteStatus(true) hides status line");
+
+function assertDeleteOutcome(response, expected, message) {
+  const actual = deleteFetchOutcome(response);
+  assertEqual(actual.count, expected.count, `${message} count`);
+  assertEqual(actual.close, expected.close, `${message} close`);
+  assertEqual(actual.error, expected.error, `${message} error`);
+}
+assertDeleteOutcome(
+  { ok: true, status: 200 },
+  { count: true, close: true, error: false },
+  "200 applies count and closes",
+);
+assertDeleteOutcome(
+  { ok: false, status: 404 },
+  { count: false, close: true, error: false },
+  "404 closes without count",
+);
+assertDeleteOutcome(
+  { ok: false, status: 500 },
+  { count: false, close: false, error: true },
+  "5xx stays with error",
+);
+assertDeleteOutcome(
+  { ok: false, status: 401 },
+  { count: false, close: false, error: true },
+  "401 stays with error",
+);
+assertDeleteOutcome(
+  null,
+  { count: false, close: false, error: true },
+  "throw stays with error",
+);
 
 const originalFetch = globalThis.fetch;
 

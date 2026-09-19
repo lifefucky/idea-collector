@@ -41,6 +41,25 @@ def test_pending_row_uses_raw_text(store: IdeaStore) -> None:
     assert presented["shelf"] == OWN_SHELF
 
 
+def test_delete_returns_removed_and_remaining_count(store: IdeaStore) -> None:
+    first, _ = store.insert("keep")
+    second, _ = store.insert("gone")
+    removed, count = store.delete(second.id)
+    assert removed is True
+    assert count == 1
+    assert store.count() == 1
+    assert store.get(second.id) is None
+    assert store.get(first.id) is not None
+    missing, remaining = store.delete(second.id)
+    assert missing is False
+    assert remaining == 1
+    assert store.list_all()[0].id == first.id
+    last_removed, empty = store.delete(first.id)
+    assert last_removed is True
+    assert empty == 0
+    assert store.count() == 0
+
+
 def test_persist_fail_does_not_store() -> None:
     class BoomStore(IdeaStore):
         def insert(self, raw_text: str):  # type: ignore[override]
