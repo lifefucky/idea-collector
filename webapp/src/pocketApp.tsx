@@ -1,5 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
-import { AppRoot, Tabbar } from "@telegram-apps/telegram-ui";
+import { AppRoot } from "@telegram-apps/telegram-ui";
+import { Home, MessageCircle, Settings } from "lucide-react";
 import { setCaptureStripHidden } from "./cardChrome.js";
 import { IdeaList } from "./listApp";
 import { SourcesPane } from "./sourcesPane";
@@ -18,13 +19,59 @@ type PocketAppProps = {
   onOpenError: () => void;
 };
 
+function BottomNav({
+  tab,
+  onIdeas,
+  onSources,
+}: {
+  tab: TabId;
+  onIdeas: () => void;
+  onSources: () => void;
+}) {
+  const onIdeasTab = tab === "ideas";
+  const onSourcesTab = tab === "sources";
+  return (
+    <nav className="bottom-nav" aria-label="Вкладки кармана">
+      <button
+        type="button"
+        className="bottom-nav-item"
+        aria-label="Идеи"
+        aria-current={onIdeasTab ? "page" : undefined}
+        onClick={onIdeas}
+      >
+        <Home size={18} strokeWidth={onIdeasTab ? 2.4 : 2} />
+      </button>
+      <button
+        type="button"
+        className="bottom-nav-item"
+        aria-label="Sources"
+        aria-current={onSourcesTab ? "page" : undefined}
+        onClick={onSources}
+      >
+        <Settings size={18} strokeWidth={onSourcesTab ? 2.4 : 2} />
+      </button>
+      <button
+        type="button"
+        className="bottom-nav-item bottom-nav-stub"
+        aria-label="Лента"
+        aria-disabled="true"
+        tabIndex={-1}
+        data-stub="no-backend"
+        style={{ pointerEvents: "none" }}
+      >
+        <MessageCircle size={18} strokeWidth={2} />
+      </button>
+    </nav>
+  );
+}
+
 export function PocketApp({
   getInitData,
   onCopy,
   onCount,
   onDeleteClear,
   onDeleteError,
-  appearance,
+  appearance: _appearance,
   onCardOpenChange,
   onSaveError,
   onOpenError,
@@ -59,7 +106,7 @@ export function PocketApp({
   }, [tab, overlayOpen, cardOpen, cancelOverlay, onCardOpenChange]);
 
   return (
-    <AppRoot appearance={appearance} platform="ios">
+    <AppRoot appearance="dark" platform="ios">
       <div className="pocket-ideas" hidden={tab !== "ideas"}>
         <IdeaList
           getInitData={getInitData}
@@ -67,7 +114,7 @@ export function PocketApp({
           onCount={onCount}
           onDeleteClear={onDeleteClear}
           onDeleteError={onDeleteError}
-          appearance={appearance}
+          appearance="dark"
           onCardOpenChange={reportCard}
         />
       </div>
@@ -81,21 +128,16 @@ export function PocketApp({
           onOpenError={onOpenError}
         />
       </div>
-      <Tabbar>
-        <Tabbar.Item
-          text="Идеи"
-          selected={tab === "ideas"}
-          onClick={() => {
+      {!cardOpen && !overlayOpen ? (
+        <BottomNav
+          tab={tab}
+          onIdeas={() => {
             setOverlayOpen(false);
             setTab("ideas");
           }}
+          onSources={() => setTab("sources")}
         />
-        <Tabbar.Item
-          text="Sources"
-          selected={tab === "sources"}
-          onClick={() => setTab("sources")}
-        />
-      </Tabbar>
+      ) : null}
     </AppRoot>
   );
 }

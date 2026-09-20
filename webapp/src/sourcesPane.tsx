@@ -1,10 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { openLink } from "@telegram-apps/sdk";
-import { Button, Cell, Input, Modal, Section } from "@telegram-apps/telegram-ui";
+import { Modal } from "@telegram-apps/telegram-ui";
+import { ChevronLeft, ExternalLink, Trash2 } from "lucide-react";
 import { sourceDeleteOutcome } from "./capture.js";
+import { cardTone, sourceAbbrev } from "./ideaCard.js";
 import { openSourceUrl } from "./sourceLink.js";
 
 export const OPEN_ERROR = "Не удалось открыть";
+
+const sourceSuggestions = [
+  { title: "Product Hunt", url: "https://www.producthunt.com" },
+  { title: "YC Library", url: "https://www.ycombinator.com/library" },
+  { title: "Product Radar", url: "https://productradar.so" },
+  { title: "App Store", url: "https://apps.apple.com" },
+];
 
 type Source = {
   id: number;
@@ -130,22 +139,29 @@ export function SourcesPane({
 
   return (
     <div className="sources-pane">
-      <Button
-        type="button"
-        mode="plain"
-        size="l"
-        className="sources-add"
-        onClick={() => onOverlayOpenChange(true)}
-      >
-        +
-      </Button>
+      <div className="sources-header">
+        <button
+          type="button"
+          className="sources-add"
+          onClick={() => onOverlayOpenChange(true)}
+        >
+          + Источник
+        </button>
+        <span className="sources-count" aria-label={`Источников: ${sources.length}`}>
+          {sources.length}
+        </span>
+      </div>
+      <div className="sources-heading">
+        <h1>Sources</h1>
+        <span>ссылки</span>
+      </div>
       {sources.length > 0 ? (
-        <Section>
+        <div className="source-abbrev-row no-scrollbar">
           {sources.map((source) => (
-            <Cell
+            <button
               key={source.id}
-              multiline
-              className="source-row"
+              type="button"
+              className="shelf-chip"
               onClick={() => {
                 try {
                   openSourceUrl(source.url, openLink);
@@ -153,66 +169,138 @@ export function SourcesPane({
                   onOpenError();
                 }
               }}
-              after={
-                <Button
-                  type="button"
-                  mode="plain"
-                  size="l"
-                  className="source-row-delete"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    void deleteSource(source.id);
-                  }}
-                >
-                  Удалить
-                </Button>
-              }
             >
-              {source.title}
-            </Cell>
+              <span className="shelf-chip-label">{sourceAbbrev(source.title)}</span>
+              <span className="shelf-chip-hint">полка</span>
+            </button>
           ))}
-        </Section>
+        </div>
       ) : null}
+      <div className="source-stack">
+        {sources.map((source) => (
+          <article
+            key={source.id}
+            className={`source-card tone-${cardTone(source.id)}`}
+          >
+            <div className="source-card-top">
+              <button
+                type="button"
+                className="source-row idea-row"
+                onClick={() => {
+                  try {
+                    openSourceUrl(source.url, openLink);
+                  } catch {
+                    onOpenError();
+                  }
+                }}
+              >
+                {source.title}
+              </button>
+              <button
+                type="button"
+                className="source-abbrev"
+                aria-label="Открыть ссылку"
+                onClick={() => {
+                  try {
+                    openSourceUrl(source.url, openLink);
+                  } catch {
+                    onOpenError();
+                  }
+                }}
+              >
+                <ExternalLink size={15} />
+              </button>
+            </div>
+            <p className="source-url">{source.url}</p>
+            <div className="source-card-footer">
+              <span className="source-open-hint">тап открывает</span>
+              <button
+                type="button"
+                className="source-row-delete"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void deleteSource(source.id);
+                }}
+              >
+                <Trash2 size={12} />
+                Удалить
+              </button>
+            </div>
+          </article>
+        ))}
+      </div>
       <Modal
         className="sources-overlay"
         open={overlayOpen}
         onOpenChange={onOverlayOpenChange}
       >
+        <div className="sources-overlay-chrome">
+          <button
+            type="button"
+            className="sources-overlay-back"
+            aria-label="Назад"
+            onClick={() => onOverlayOpenChange(false)}
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <button
+            type="button"
+            className="sources-overlay-cancel"
+            onClick={() => onOverlayOpenChange(false)}
+          >
+            Отмена
+          </button>
+        </div>
         <form
           className="sources-overlay-form"
           onSubmit={(event) => {
             event.preventDefault();
           }}
         >
-          <Input
-            placeholder="Название"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-          />
-          <Input
-            placeholder="Ссылка"
-            value={url}
-            onChange={(event) => setUrl(event.target.value)}
-          />
-          <Button
+          <h2 className="sources-overlay-title">Hey, новый источник</h2>
+          <label>
+            Название
+            <input
+              placeholder="Название"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+            />
+          </label>
+          <label>
+            Ссылка
+            <input
+              placeholder="Ссылка"
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+            />
+          </label>
+          <p className="source-suggest-label">Подсказка</p>
+          <div className="source-suggest-row no-scrollbar">
+            {sourceSuggestions.map((item) => (
+              <button
+                key={item.title}
+                type="button"
+                className="source-suggest-chip"
+                data-stub="no-backend"
+                onClick={() => {
+                  setTitle(item.title);
+                  setUrl(item.url);
+                }}
+              >
+                <span>{sourceAbbrev(item.title)}</span>
+                <span>полка</span>
+              </button>
+            ))}
+          </div>
+          <button
             type="button"
-            size="l"
             className="sources-overlay-save"
             onClick={() => {
               void saveSource();
             }}
           >
             Сохранить
-          </Button>
-          <Button
-            type="button"
-            mode="plain"
-            size="l"
-            className="sources-overlay-cancel"
-            onClick={() => onOverlayOpenChange(false)}
-          >
-            Отмена
-          </Button>
+          </button>
         </form>
       </Modal>
     </div>

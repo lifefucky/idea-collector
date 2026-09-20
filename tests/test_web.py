@@ -77,13 +77,19 @@ async def test_first_paint_field_and_count_without_js_bundle(
     assert COUNT_PLACEHOLDER in html
     assert 'id="idea-list"' in html
     assert "onsubmit=\"return false;\"" in html
-    assert "clip: rect(0, 0, 0, 0)" in html
+    assert 'id="capture-submit"' in html
+    assert "Захватить" in html
+    assert "clip: rect(0, 0, 0, 0)" not in html
+    assert "#f5c400" in html
+    assert "#0e0e0e" in html
     assert "white-space: nowrap" in html
     assert "font-variant-numeric: tabular-nums" in html
     assert "disabled" not in html
     response = await client.get("/")
     assert response.status == 200
     body = await response.text()
+    assert "Захватить" in body
+    assert "clip: rect(0, 0, 0, 0)" not in body
     assert 'id="capture-field"' in body
     assert 'placeholder="Идея"' in body
     assert f'id="ideas-counter">{store.count()}</span>' in body or (
@@ -97,6 +103,35 @@ async def test_first_paint_field_and_count_without_js_bundle(
     body_html = html.split("<body>", 1)[1].split("<script", 1)[0]
     assert "Tabbar" not in body_html
     assert "Sources" not in body_html
+    assert "Лента" not in body_html
+    assert "BottomNav" not in body_html
+
+
+def test_built_telegram_html_has_v2_tokens_and_nav_in_bundle() -> None:
+    completed = subprocess.run(
+        ["npm", "--prefix", str(ROOT / "webapp"), "run", "build"],
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=str(ROOT),
+        timeout=120,
+    )
+    assert completed.returncode == 0, completed.stderr + completed.stdout
+    dist_index = ROOT / "webapp" / "dist" / "index.html"
+    html = dist_index.read_text(encoding="utf-8")
+    body_html = html.split("<body>", 1)[1].split("<script", 1)[0]
+    assert "#f5c400" in html
+    assert "#0e0e0e" in html
+    assert "Захватить" in html
+    assert "Лента" not in body_html
+    assert "BottomNav" not in body_html
+    assert "Tabbar" not in body_html
+    js = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (ROOT / "webapp" / "dist" / "assets").glob("*.js")
+    )
+    assert "Лента" in js
+    assert "bottom-nav" in js
 
 
 def test_empty_pocket_is_field_and_zero() -> None:
@@ -555,9 +590,10 @@ def test_idea_card_open_does_not_copy() -> None:
     main = (ROOT / "webapp" / "src" / "main.tsx").read_text(encoding="utf-8")
     index = INDEX.read_text(encoding="utf-8")
     body_html = index.split("<body>", 1)[1].split("<script", 1)[0]
-    row = list_app.split('className="idea-row"', 1)[1].split("</Cell>", 1)[0]
+    row = list_app.split('className="idea-row"', 1)[1].split("</button>", 1)[0]
     assert "selectedIdea" in list_app
-    assert "onClick={() => openCard(idea)}" in row
+    assert "onClick={() => onOpen(idea)}" in row
+    assert "onOpen={openCard}" in list_app
     assert "onCopy" not in row
     assert "idea-card-header" in list_app
     assert "selectedIdea.label" in list_app
@@ -578,7 +614,7 @@ def test_idea_card_body_copy_contract() -> None:
     list_app = (ROOT / "webapp" / "src" / "listApp.tsx").read_text(encoding="utf-8")
     main = (ROOT / "webapp" / "src" / "main.tsx").read_text(encoding="utf-8")
     capture = (ROOT / "webapp" / "src" / "capture.js").read_text(encoding="utf-8")
-    body = list_app.split('className="idea-card-body"', 1)[1].split("</Tappable>", 1)[0]
+    body = list_app.split('className="idea-card-body"', 1)[1].split("</button>", 1)[0]
     assert "onCopy(selectedIdea.copy)" in body
     assert "ignoreBodyCopy" in body
     assert "bindCopy" in main
@@ -669,12 +705,12 @@ def test_idea_card_delete_contract() -> None:
     capture = (ROOT / "webapp" / "src" / "capture.js").read_text(encoding="utf-8")
     index = INDEX.read_text(encoding="utf-8")
     body_html = index.split("<body>", 1)[1].split("<script", 1)[0]
-    body = list_app.split('className="idea-card-body"', 1)[1].split("</Tappable>", 1)[0]
-    after_body = list_app.split("</Tappable>", 1)[1].split(") : (", 1)[0]
-    row = list_app.split('className="idea-row"', 1)[1].split("</Cell>", 1)[0]
+    body = list_app.split('className="idea-card-body"', 1)[1].split("</button>", 1)[0]
+    after_body = list_app.split('className="idea-card-body"', 1)[1].split("</button>", 1)[1].split(") : (", 1)[0]
+    row = list_app.split('className="idea-row"', 1)[1].split("</button>", 1)[0]
     delete_css = index.split("button.idea-card-delete", 1)[1].split("}", 1)[0]
     handler = list_app.split("const deleteSelected = useCallback", 1)[1].split(
-        "}, [closeCard, getInitData, load, onCount, onDeleteClear,"
+        "}, [getInitData, load, onCount, onDeleteClear,"
         " onDeleteError, selectedIdea]);",
         1,
     )[0]
@@ -683,20 +719,18 @@ def test_idea_card_delete_contract() -> None:
     assert "Удалить" not in row
     assert "Удалить" not in body_html
     assert "Удалить" in after_body
-    assert after_body.find("</Section>") < after_body.find("Удалить")
     assert 'className="idea-card-delete"' in after_body
-    assert "<Button" in after_body
-    assert 'from "@telegram-apps/telegram-ui"' in list_app
-    assert "Button" in list_app.split('from "@telegram-apps/telegram-ui"', 1)[0]
+    assert "<button" in after_body
+    assert "idea-related" in list_app
     assert "44pt" in delete_css
-    assert "destructive" in delete_css
     assert "button.idea-card-delete" in index
     assert 'method: "DELETE"' in handler
     assert "deleteFetchOutcome(response)" in handler
     assert "deleteFetchOutcome(null)" in handler
     assert "onCount(body.count)" in handler
     assert "onDeleteClear()" in handler
-    assert "closeCard()" in handler
+    assert "setSelectedIdea((current) => (current?.id === deletedId ? null : current))" in handler
+    assert "closeCard()" not in handler
     assert "await load()" in handler
     assert "onDeleteError()" in handler
     assert "if (deleteInFlight.current || selectedIdea === null)" in handler
@@ -857,15 +891,15 @@ def test_sources_tabbar_overlay_open_delete_contracts() -> None:
         1,
     )[0]
     delete_btn = sources.split('className="source-row-delete"', 1)[1].split(
-        "</Button>",
+        "</button>",
         1,
     )[0]
     cancel_btn = sources.split('className="sources-overlay-cancel"', 1)[1].split(
-        "</Button>",
+        "</button>",
         1,
     )[0]
     save_btn = sources.split('className="sources-overlay-save"', 1)[1].split(
-        "</Button>",
+        "</button>",
         1,
     )[0]
     save_fn = sources.split("const saveSource = useCallback", 1)[1].split(
@@ -884,8 +918,11 @@ def test_sources_tabbar_overlay_open_delete_contracts() -> None:
     assert "Sources" not in body_html
     assert "Идеи" in pocket
     assert "Sources" in pocket
-    assert "Tabbar" in pocket
-    assert "Tabbar.Item" in pocket
+    assert "BottomNav" in pocket
+    assert "Лента" in pocket
+    assert 'data-stub="no-backend"' in pocket
+    assert "Tabbar" not in pocket
+    assert "Tabbar.Item" not in pocket
     assert "<IdeaList" in ideas_pane
     assert 'hidden={tab !== "ideas"}' in pocket
     assert "&& <IdeaList" not in pocket
@@ -926,9 +963,11 @@ def test_sources_tabbar_overlay_open_delete_contracts() -> None:
     assert "setSources(body.sources ?? [])" in load_fn
     assert 'className="sources-add"' in sources
     assert "+" in sources.split('className="sources-add"', 1)[1].split(
-        "</Button>",
+        "</button>",
         1,
     )[0]
+    assert 'data-stub="no-backend"' in sources
+    assert "source-suggest-chip" in sources
     assert "{source.title}" in sources
     assert "subtitle=" not in sources
     assert "description=" not in sources
@@ -942,7 +981,6 @@ def test_sources_tabbar_overlay_open_delete_contracts() -> None:
     assert "confirm" not in sources.lower()
     assert "undo" not in sources.lower()
     assert "44pt" in delete_css
-    assert "destructive" in delete_css
     assert "OPEN_ERROR" in sources
     assert "Не удалось открыть" in sources
     assert "onOpenError()" in sources

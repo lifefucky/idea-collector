@@ -12,6 +12,7 @@
   "dependencies": {
     "@telegram-apps/sdk": "^3",
     "@telegram-apps/telegram-ui": "^2",
+    "lucide-react": "^0.544.0",
     "react": "^18",
     "react-dom": "^18"
   },
