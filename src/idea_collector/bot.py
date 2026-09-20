@@ -84,7 +84,8 @@ async def on_csv(message: Message, config: Config, store: IdeaStore) -> None:
     user = message.from_user
     if user is None or user.id != config.operator_telegram_id:
         return
-    ideas = store.list_all()
+    owner = f"tg:{config.operator_telegram_id}"
+    ideas = store.list_for_owner(owner)
     try:
         if not ideas:
             await message.answer("В кармане нет идей")
@@ -111,12 +112,14 @@ async def on_text(
     text = message.text or ""
     if text.startswith("/"):
         return
+    owner = f"tg:{config.operator_telegram_id}"
     result = capture_text(
         store,
         enricher,
         user_id=user.id,
         operator_id=config.operator_telegram_id,
         text=text,
+        owner=owner,
     )
     reply = bot_reply(result)
     if reply is None:

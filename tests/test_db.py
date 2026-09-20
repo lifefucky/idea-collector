@@ -104,7 +104,7 @@ def test_source_store_memory_connections_are_separate(store: IdeaStore) -> None:
 
 def test_persist_fail_does_not_store() -> None:
     class BoomStore(IdeaStore):
-        def insert(self, raw_text: str):  # type: ignore[override]
+        def insert(self, raw_text: str, owner: str = "global"):  # type: ignore[override]
             raise sqlite3.OperationalError("disk")
 
     boom = BoomStore(":memory:")
@@ -140,3 +140,34 @@ def test_config_boot_fail_without_required_env() -> None:
                 "OPERATOR_TELEGRAM_ID": "1",
             }
         )
+
+
+def test_delete_for_owner_does_not_remove_other_owner(store: IdeaStore) -> None:
+    """Attempting to delete another owner's idea should be a no-op."""
+
+    first_owner = "tg:1"
+    second_owner = "tg:2"
+    keep, _ = store.insert("keep", owner=first_owner)
+    other, _ = store.insert("other", owner=second_owner)
+
+    removed, remaining = store.delete_for_owner(other.id, first_owner)
+    assert removed is False
+    # First owner still sees only their own idea.
+    assert remaining == 1
+    assert store.get(keep.id) is not None
+    assert store.get(other.id) is not None
+
+
+def test_delete_for_local_owner_does_not_delete_global(store: IdeaStore) -> None:
+    """Local owner pockets must not be able to delete legacy global ideas."""
+
+    # Insert as legacy global owner.
+    idea, _ = store.insert("legacy global")
+    assert idea.owner == "global"
+
+    removed, remaining = store.delete_for_owner(idea.id, "local:42")
+    assert removed is False
+    # Local pocket has no ideas visible, so count_for_owner is zero.
+    assert remaining == 0
+    # The global row must still be present in the database.
+    assert store.get(idea.id) is not None

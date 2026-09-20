@@ -25,6 +25,7 @@ def capture_text(
     user_id: int,
     operator_id: int,
     text: str,
+    owner: str = "global",
 ) -> CaptureResult:
     if user_id != operator_id:
         return CaptureResult(ignored=True)
@@ -32,7 +33,7 @@ def capture_text(
     if not stripped:
         return CaptureResult(error=PERSIST_ERROR)
     try:
-        idea, count = store.insert(stripped)
+        idea, count = store.insert(stripped, owner=owner)
     except Exception:
         return CaptureResult(error=PERSIST_ERROR)
     try:

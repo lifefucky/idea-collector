@@ -78,6 +78,8 @@ async def test_first_paint_field_and_count_without_js_bundle(
     assert 'id="idea-list"' in html
     assert "onsubmit=\"return false;\"" in html
     assert "clip: rect(0, 0, 0, 0)" in html
+    assert "white-space: nowrap" in html
+    assert "font-variant-numeric: tabular-nums" in html
     assert "disabled" not in html
     response = await client.get("/")
     assert response.status == 200
@@ -128,6 +130,7 @@ async def test_bot_dump_operator_ack_queue_and_non_operator(
         user_id=OPERATOR_ID,
         operator_id=OPERATOR_ID,
         text="from chat",
+        owner=f"tg:{OPERATOR_ID}",
     )
     assert result.idea is not None
     assert result.count == 1
@@ -142,6 +145,7 @@ async def test_bot_dump_operator_ack_queue_and_non_operator(
         user_id=OPERATOR_ID,
         operator_id=OPERATOR_ID,
         text="from chat",
+        owner=f"tg:{OPERATOR_ID}",
     )
     assert again.count == 2
     assert bot_reply(again) == "2"
@@ -150,7 +154,7 @@ async def test_bot_dump_operator_ack_queue_and_non_operator(
 @pytest.mark.asyncio
 async def test_bot_persist_fail_not_stored_short_error(enricher: Enricher) -> None:
     class BoomStore(IdeaStore):
-        def insert(self, raw_text: str) -> Idea:
+        def insert(self, raw_text: str, owner: str = "global") -> Idea:  # type: ignore[override]
             raise sqlite3.OperationalError("disk")
 
     boom = BoomStore(":memory:")
@@ -366,7 +370,7 @@ async def test_webapp_dump_returns_before_llm_and_increments(
 @pytest.mark.asyncio
 async def test_webapp_persist_fail_keeps_count(config, enricher: Enricher) -> None:
     class BoomStore(IdeaStore):
-        def insert(self, raw_text: str) -> Idea:
+        def insert(self, raw_text: str, owner: str = "global") -> Idea:  # type: ignore[override]
             raise sqlite3.OperationalError("disk")
 
     boom = BoomStore(":memory:")
@@ -419,6 +423,81 @@ async def test_api_ideas_groups_and_copy_payload(client, store: IdeaStore) -> No
     ph = body["shelves"][1]["ideas"][0]
     assert ph["label"] == "Short PH"
     assert ph["copy"] == "copy this"
+
+
+@pytest.mark.asyncio
+async def test_local_and_telegram_ideas_are_separate(client, store: IdeaStore) -> None:
+    # Local preview uses dev initData and localhost host.
+    local_headers = {"Authorization": "tma dev"}
+
+    local_resp = await client.post(
+        "/api/ideas",
+        json={"text": "local idea"},
+        headers=local_headers,
+    )
+    assert local_resp.status == 200
+    assert (await local_resp.json())["count"] == 1
+
+    tg_resp = await client.post(
+        "/api/ideas",
+        json={"text": "tg idea"},
+        headers=_auth_headers(),
+    )
+    assert tg_resp.status == 200
+    assert (await tg_resp.json())["count"] == 1
+
+    local_list = await client.get("/api/ideas", headers=local_headers)
+    tg_list = await client.get("/api/ideas", headers=_auth_headers())
+    assert local_list.status == 200
+    assert tg_list.status == 200
+    local_body = await local_list.json()
+    tg_body = await tg_list.json()
+    assert local_body["count"] == 1
+    assert tg_body["count"] == 1
+    assert any(idea["label"] == "local idea" for shelf in local_body["shelves"] for idea in shelf["ideas"])
+    assert all(idea["label"] != "tg idea" for shelf in local_body["shelves"] for idea in shelf["ideas"])
+    assert any(idea["label"] == "tg idea" for shelf in tg_body["shelves"] for idea in shelf["ideas"])
+    assert all(idea["label"] != "local idea" for shelf in tg_body["shelves"] for idea in shelf["ideas"])
+
+
+@pytest.mark.asyncio
+async def test_local_and_telegram_sources_are_separate(client, store: IdeaStore) -> None:
+    local_headers = {"Authorization": "tma dev"}
+
+    # Ensure operator pocket exists for both owners.
+    await client.post(
+        "/api/ideas",
+        json={"text": "seed local"},
+        headers=local_headers,
+    )
+    await client.post(
+        "/api/ideas",
+        json={"text": "seed tg"},
+        headers=_auth_headers(),
+    )
+
+    local_created = await client.post(
+        "/api/sources",
+        json={"title": "LocalDoc", "url": "https://local.example"},
+        headers=local_headers,
+    )
+    assert local_created.status == 200
+
+    tg_created = await client.post(
+        "/api/sources",
+        json={"title": "TgDoc", "url": "https://tg.example"},
+        headers=_auth_headers(),
+    )
+    assert tg_created.status == 200
+
+    local_sources = await client.get("/api/sources", headers=local_headers)
+    tg_sources = await client.get("/api/sources", headers=_auth_headers())
+    assert local_sources.status == 200
+    assert tg_sources.status == 200
+    local_body = await local_sources.json()
+    tg_body = await tg_sources.json()
+    assert [s["title"] for s in local_body["sources"]] == ["LocalDoc"]
+    assert [s["title"] for s in tg_body["sources"]] == ["TgDoc"]
 
 
 @pytest.mark.asyncio
@@ -561,8 +640,9 @@ async def test_delete_idea_operator_count_and_errors(client, store: IdeaStore) -
 @pytest.mark.asyncio
 async def test_delete_returns_404_when_remove_fails(config, enricher: Enricher) -> None:
     class MissStore(IdeaStore):
-        def delete(self, idea_id: int) -> tuple[bool, int]:
-            return False, super().count()
+        def delete_for_owner(self, idea_id: int, owner: str) -> tuple[bool, int]:
+            # Simulate a low-level delete failure even when the idea exists.
+            return False, super().count_for_owner(owner)
 
     store = MissStore(":memory:")
     idea, _ = store.insert("still there")
@@ -627,8 +707,11 @@ def test_idea_card_delete_contract() -> None:
     assert "deleteStatus(true)" in main
     assert "deleteStatus(false)" in main
     assert "setIdeasCounter" in main
+    assert "replaceCountPlaceholder" in main
+    assert "replaceCountPlaceholder(counter)" in main
     assert "DELETE_ERROR" in capture
     assert "setIdeasCounter" in capture
+    assert "export function replaceCountPlaceholder" in capture
     assert "export function deleteFetchOutcome" in capture
     assert "history.back" not in handler
     assert "confirm" not in handler.lower()

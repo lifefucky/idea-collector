@@ -76,12 +76,21 @@ def _is_local_request(request: web.Request) -> bool:
 
 
 def _operator_from_request(request: web.Request) -> None:
+    # Backwards-compatible shim: keep behavior for call sites that only
+    # need to enforce operator auth without caring about the owner key.
+    _owner_from_request(request)
+
+
+def _owner_from_request(request: web.Request) -> str:
+    """Return the owner key for this request, enforcing operator auth."""
+
     config = request.app[CONFIG_KEY]
     init_data = init_data_from_headers(dict(request.headers))
     if init_data == "dev" and _is_local_request(request):
-        # Local preview: allow operator without real Telegram initData.
-        return
-    require_operator(init_data, config)
+        # Local preview: treat as a separate local owner pocket.
+        return f"local:{config.operator_telegram_id}"
+    user = require_operator(init_data, config)
+    return f"tg:{user.id}"
 
 
 def _json_error(status: int, message: str) -> web.Response:
@@ -90,30 +99,46 @@ def _json_error(status: int, message: str) -> web.Response:
 
 async def handle_index(request: web.Request) -> web.StreamResponse:
     store = request.app[STORE_KEY]
+    config = request.app[CONFIG_KEY]
     path = webapp_index_path()
     if not path.is_file():
         raise web.HTTPNotFound(text="webapp index is missing; build webapp/dist")
     html = path.read_text(encoding="utf-8")
-    body = inject_count(html, store.count())
+    # For local preview, show the count for the local owner pocket so the
+    # counter matches what the operator sees in the app. For Telegram and
+    # other environments, try to scope by owner when auth is available, but
+    # fall back to the global count so the Mini App still renders even when
+    # initData is missing or invalid.
+    if _is_local_request(request):
+        owner = f"local:{config.operator_telegram_id}"
+        count = store.count_for_owner(owner)
+    else:
+        try:
+            owner = _owner_from_request(request)
+        except AuthError:
+            count = store.count()
+        else:
+            count = store.count_for_owner(owner)
+    body = inject_count(html, count)
     return web.Response(text=body, content_type="text/html")
 
 
 async def handle_count(request: web.Request) -> web.StreamResponse:
     try:
-        _operator_from_request(request)
+        owner = _owner_from_request(request)
     except AuthError as exc:
         return _json_error(exc.status, exc.message)
     store = request.app[STORE_KEY]
-    return web.json_response({"count": store.count()})
+    return web.json_response({"count": store.count_for_owner(owner)})
 
 
 async def handle_list_ideas(request: web.Request) -> web.StreamResponse:
     try:
-        _operator_from_request(request)
+        owner = _owner_from_request(request)
     except AuthError as exc:
         return _json_error(exc.status, exc.message)
     store = request.app[STORE_KEY]
-    ideas = store.list_all()
+    ideas = store.list_for_owner(owner)
     return web.json_response(
         {
             "count": len(ideas),
@@ -142,7 +167,7 @@ async def handle_create_idea(request: web.Request) -> web.StreamResponse:
     store = request.app[STORE_KEY]
     enricher = request.app[ENRICHER_KEY]
     try:
-        _operator_from_request(request)
+        owner = _owner_from_request(request)
         text = await _read_idea_text(request)
     except AuthError as exc:
         return _json_error(exc.status, exc.message)
@@ -154,6 +179,7 @@ async def handle_create_idea(request: web.Request) -> web.StreamResponse:
         user_id=config.operator_telegram_id,
         operator_id=config.operator_telegram_id,
         text=text,
+        owner=owner,
     )
     if result.error or result.idea is None:
         return _json_error(500, result.error or "Не удалось сохранить")
@@ -162,7 +188,7 @@ async def handle_create_idea(request: web.Request) -> web.StreamResponse:
 
 async def handle_delete_idea(request: web.Request) -> web.StreamResponse:
     try:
-        _operator_from_request(request)
+        owner = _owner_from_request(request)
     except AuthError as exc:
         return _json_error(exc.status, exc.message)
     try:
@@ -170,7 +196,7 @@ async def handle_delete_idea(request: web.Request) -> web.StreamResponse:
     except (TypeError, ValueError):
         return _json_error(400, "invalid id")
     store = request.app[STORE_KEY]
-    removed, count = store.delete(idea_id)
+    removed, count = store.delete_for_owner(idea_id, owner)
     if not removed:
         return _json_error(404, "not found")
     return web.json_response({"count": count})
@@ -182,11 +208,11 @@ def _source_payload(source: Source) -> dict[str, int | str]:
 
 async def handle_list_sources(request: web.Request) -> web.StreamResponse:
     try:
-        _operator_from_request(request)
+        owner = _owner_from_request(request)
     except AuthError as exc:
         return _json_error(exc.status, exc.message)
     store = request.app[STORE_KEY]
-    sources = SourceStore(store).list_all()
+    sources = SourceStore(store).list_for_owner(owner)
     return web.json_response({"sources": [_source_payload(item) for item in sources]})
 
 
@@ -207,19 +233,19 @@ async def _read_source_fields(request: web.Request) -> tuple[str, str]:
 async def handle_create_source(request: web.Request) -> web.StreamResponse:
     store = request.app[STORE_KEY]
     try:
-        _operator_from_request(request)
+        owner = _owner_from_request(request)
         title, url = await _read_source_fields(request)
     except AuthError as exc:
         return _json_error(exc.status, exc.message)
     if not title or not url:
         return _json_error(400, "Не удалось сохранить")
-    source = SourceStore(store).insert(title, url)
+    source = SourceStore(store).insert(title, url, owner=owner)
     return web.json_response(_source_payload(source))
 
 
 async def handle_delete_source(request: web.Request) -> web.StreamResponse:
     try:
-        _operator_from_request(request)
+        owner = _owner_from_request(request)
     except AuthError as exc:
         return _json_error(exc.status, exc.message)
     try:
@@ -227,7 +253,7 @@ async def handle_delete_source(request: web.Request) -> web.StreamResponse:
     except (TypeError, ValueError):
         return _json_error(400, "invalid id")
     store = request.app[STORE_KEY]
-    removed = SourceStore(store).delete(source_id)
+    removed = SourceStore(store).delete_for_owner(source_id, owner)
     if not removed:
         return _json_error(404, "not found")
     return web.json_response({"ok": True})
