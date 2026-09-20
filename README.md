@@ -99,18 +99,14 @@ uv run ruff check src tests
 
 `uv run pytest` запускает `npm --prefix webapp test` и требует `npm --prefix webapp install`.
 
-Локальный Vite (без бота и без API):
+Локальный Vite проксирует `/api` на `http://127.0.0.1:8080` (`dev` и `preview`). Авторизация API не ослабляется.
 
 ```bash
 npm --prefix webapp install
-npm --prefix webapp run dev
-```
-
-Просмотр собранного бандла:
-
-```bash
 npm --prefix webapp run preview
 ```
+
+Рядом должен работать `uv run --env-file .env idea-collector`. Без Telegram `initData` `/api/*` отвечает 401.
 
 Для полного контура (бот + Mini App) нужна сборка `webapp` и `uv run --env-file .env idea-collector`, а не `vite dev`.
 

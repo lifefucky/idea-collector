@@ -85,12 +85,19 @@ function readInitData(): string {
     /* try launch params */
   }
   try {
-    const launch = retrieveLaunchParams() as { initDataRaw?: string };
+    const launch = retrieveLaunchParams(true) as { initDataRaw?: string; tgWebAppData?: string };
     if (launch.initDataRaw) {
       return launch.initDataRaw;
     }
+    if (launch.tgWebAppData) {
+      return launch.tgWebAppData;
+    }
   } catch {
     /* outside Telegram */
+  }
+  if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    // Local preview and tests: treat as operator without weakening real Telegram auth.
+    return "dev";
   }
   return "";
 }

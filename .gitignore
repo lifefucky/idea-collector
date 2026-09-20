@@ -221,6 +221,7 @@ __marimo__/
 *.db
 webapp/node_modules/
 webapp/dist/
+research/
 
 # Bmad artifacts and agent config (local-only)
 _bmad/

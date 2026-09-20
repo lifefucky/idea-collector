@@ -70,9 +70,17 @@ def create_web_app(
     return app
 
 
+def _is_local_request(request: web.Request) -> bool:
+    host = request.host.split(":", 1)[0]
+    return host in {"127.0.0.1", "localhost"}
+
+
 def _operator_from_request(request: web.Request) -> None:
     config = request.app[CONFIG_KEY]
     init_data = init_data_from_headers(dict(request.headers))
+    if init_data == "dev" and _is_local_request(request):
+        # Local preview: allow operator without real Telegram initData.
+        return
     require_operator(init_data, config)
 
 

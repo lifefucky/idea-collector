@@ -1,6 +1,6 @@
 # Навигация по файлам
 
-Путь от корня репозитория и краткое назначение. Не включены: `.git`, `node_modules`, `webapp/dist`, кэш `_bmad/`, установленные скиллы `.agents/`, локальная БД `ideas.db`.
+Путь от корня репозитория и краткое назначение. Не включены: `.git`, `node_modules`, `webapp/dist`, кэш `_bmad/`, установленные скиллы `.agents/`, локальная БД `ideas.db`, дампы `research/`.
 
 ## Документация
 
@@ -51,7 +51,7 @@ Vite + React. Сборка `webapp/dist` отдаётся бэкендом.
 |---|---|
 | [webapp/package.json](../webapp/package.json) | Скрипты `dev` / `build` / `preview` / `test` и зависимости Telegram Mini Apps. |
 | [webapp/package-lock.json](../webapp/package-lock.json) | Зафиксированные версии npm. |
-| [webapp/vite.config.ts](../webapp/vite.config.ts) | Сборка Vite, плагин React, `base: "/"`. |
+| [webapp/vite.config.ts](../webapp/vite.config.ts) | Сборка Vite, плагин React, `base: "/"`, proxy `/api` → `:8080` для `dev` и `preview`. |
 | [webapp/tsconfig.json](../webapp/tsconfig.json) | TypeScript для `webapp/src` (JSX, strict). |
 | [webapp/tsconfig.node.json](../webapp/tsconfig.node.json) | Project reference на основной tsconfig. |
 | [webapp/index.html](../webapp/index.html) | Оболочка Mini App: поле захвата, счётчик, слот списка, стили темы Telegram. |

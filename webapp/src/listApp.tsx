@@ -84,12 +84,15 @@ export function IdeaList({
       }
       const body = (await response.json()) as IdeasResponse;
       const nextShelves = body.shelves ?? [];
+      if (typeof body.count === "number") {
+        onCount(body.count);
+      }
       setShelves(nextShelves);
       setSelectedIdea((current) => selectedAfterLoad(current, true, nextShelves));
     } catch {
       /* keep current shelves (null = skeleton) and the open card */
     }
-  }, [getInitData]);
+  }, [getInitData, onCount]);
 
   const deleteSelected = useCallback(async () => {
     if (deleteInFlight.current || selectedIdea === null) {
