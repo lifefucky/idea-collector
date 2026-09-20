@@ -7,7 +7,9 @@
 | Путь | Назначение |
 |---|---|
 | [docs/navigation.md](navigation.md) | Эта карта файлов. |
-| [docs/backlog.md](backlog.md) | Идеи на следующий срез (карточка, удаление, промпты, Docker, `/csv`, Sources). Не контракт v1. |
+| [docs/backlog.md](backlog.md) | Идеи на следующий срез. Открыто: YAML-промпты, Docker, Tinder-отсев. Сделано: карточка, удаление, `/csv`, Sources. |
+| [docs/ui-front-v2.md](ui-front-v2.md) | Спека фронта Mini App v2: адаптация визуального референса под Telegram Mini App. |
+| [docs/api-v2.md](api-v2.md) | Спека бэкенда Mini App v2: API и модели без новых сущностей. |
 | [README.md](../README.md) | Запуск, переменные окружения, HTTP API, `/csv`, стек. |
 
 ## Корень репозитория
