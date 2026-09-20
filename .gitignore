@@ -228,3 +228,5 @@ _bmad/
 _bmad-output/
 .agents/
 docs/backlog.md
+docs/ui.md
+.cursor/rules/
