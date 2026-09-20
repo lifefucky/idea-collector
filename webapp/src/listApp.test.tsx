@@ -74,6 +74,38 @@ async function click(target: string | HTMLElement) {
   await flush();
 }
 
+test("load writes remaining count from GET /api/ideas", async () => {
+  const onCount = vi.fn();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        count: 5,
+        shelves: [{ name: "Toolify", ideas: [kept] }],
+      }),
+    })),
+  );
+  await mountList({ onCount });
+  expect(onCount).toHaveBeenCalledWith(5);
+  expect(host!.querySelector(".list-skeleton")).toBeNull();
+  expect(host!.textContent).toContain("kept-label");
+});
+
+test("failed GET drops the skeleton without wiping later shelves", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: false,
+      status: 401,
+      json: async () => ({ error: "invalid initData" }),
+    })),
+  );
+  await mountList({});
+  expect(host!.querySelector(".list-skeleton")).toBeNull();
+  expect(host!.querySelector(".shelf-title")).toBeNull();
+});
+
 test("row tap does not copy; body tap after ignoreBodyCopy copies", async () => {
   vi.stubGlobal(
     "fetch",

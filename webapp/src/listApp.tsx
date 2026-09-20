@@ -80,6 +80,8 @@ export function IdeaList({
       });
       if (!response.ok) {
         setSelectedIdea((current) => selectedAfterLoad(current, false, []));
+        // keep current shelves (null = skeleton) and the open card
+        setShelves((current) => current ?? []);
         return;
       }
       const body = (await response.json()) as IdeasResponse;
@@ -90,7 +92,7 @@ export function IdeaList({
       setShelves(nextShelves);
       setSelectedIdea((current) => selectedAfterLoad(current, true, nextShelves));
     } catch {
-      /* keep current shelves (null = skeleton) and the open card */
+      setShelves((current) => current ?? []);
     }
   }, [getInitData, onCount]);
 

@@ -28,8 +28,16 @@ export function deleteStatus(ok) {
   return { text: DELETE_ERROR, destructive: true };
 }
 
+export const COUNT_PLACEHOLDER = "__IDEAS_COUNT__";
+
 export function setIdeasCounter(counter, count) {
   counter.textContent = String(count);
+}
+
+export function replaceCountPlaceholder(counter) {
+  if (counter.textContent === COUNT_PLACEHOLDER) {
+    setIdeasCounter(counter, 0);
+  }
 }
 
 export function deleteFetchOutcome(response) {

@@ -17,6 +17,7 @@ import {
   bindCopy,
   deleteStatus,
   saveStatus,
+  replaceCountPlaceholder,
   setIdeasCounter,
 } from "./capture.js";
 import {
@@ -123,6 +124,10 @@ const field = document.getElementById("capture-field");
 const counter = document.getElementById("ideas-counter");
 const status = document.getElementById("status-line");
 const listRoot = document.getElementById("idea-list");
+
+if (counter instanceof HTMLElement) {
+  replaceCountPlaceholder(counter);
+}
 
 if (
   form instanceof HTMLFormElement &&

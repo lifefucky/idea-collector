@@ -12,6 +12,8 @@ import {
   nextFieldText,
   saveStatus,
   setIdeasCounter,
+  replaceCountPlaceholder,
+  COUNT_PLACEHOLDER,
 } from "../webapp/src/capture.js";
 import {
   bindCardBackButton,
@@ -71,6 +73,12 @@ assertEqual(deleteStatus(true).text, "", "delete success has no error line");
 const counterEl = { textContent: "2" };
 setIdeasCounter(counterEl, 0);
 assertEqual(counterEl.textContent, "0", "setIdeasCounter writes remaining count");
+const placeholderEl = { textContent: COUNT_PLACEHOLDER };
+replaceCountPlaceholder(placeholderEl);
+assertEqual(placeholderEl.textContent, "0", "replaceCountPlaceholder swaps token for 0");
+const numericEl = { textContent: "7" };
+replaceCountPlaceholder(numericEl);
+assertEqual(numericEl.textContent, "7", "replaceCountPlaceholder leaves a real count");
 const deleteStatusEl = {
   hidden: true,
   textContent: "",
