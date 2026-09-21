@@ -167,7 +167,6 @@ test("row tap does not copy; body tap after ignoreBodyCopy copies", async () => 
     })),
   );
   const { onCopy } = await mountList({});
-  expect(host!.querySelector(".shelf-title")).not.toBeNull();
   await click(".idea-row");
   expect(onCopy).not.toHaveBeenCalled();
   expect(host!.querySelector(".idea-card-body")).not.toBeNull();
@@ -213,7 +212,6 @@ test("delete then failed GET drops the id and keeps other shelves", async () => 
     }),
   );
   await mountList({ onCount });
-  expect(host!.querySelectorAll(".shelf-title").length).toBe(2);
   const goneRow = [...host!.querySelectorAll(".idea-row")].find((node) =>
     node.textContent?.includes("gone-label"),
   );
@@ -228,10 +226,6 @@ test("delete then failed GET drops the id and keeps other shelves", async () => 
     expect(host!.textContent).not.toContain("gone-label");
   });
   expect(onCount).toHaveBeenCalledWith(1);
-  const titles = [...host!.querySelectorAll(".shelf-title")].map(
-    (node) => node.textContent,
-  );
-  expect(titles).toEqual(["own"]);
   expect(host!.textContent).toContain("kept-label");
 });
 

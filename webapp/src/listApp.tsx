@@ -325,22 +325,16 @@ export function IdeaList({
             </div>
           ) : null}
           <div className="shelf-stack">
-            {visibleShelves.map((shelf) => (
-              <section key={shelf.name} className="shelf-group">
-                <div className="shelf-heading">
-                  <h2 className="shelf-title">{shelf.name}</h2>
-                  <span className="shelf-heading-count">{shelf.ideas.length}</span>
-                </div>
-                {shelf.ideas.map((idea) => (
-                  <IdeaToneCard
-                    key={idea.id}
-                    idea={idea}
-                    shelf={shelf.name}
-                    onOpen={openCard}
-                  />
-                ))}
-              </section>
-            ))}
+            {visibleShelves.flatMap((shelf) =>
+              shelf.ideas.map((idea) => (
+                <IdeaToneCard
+                  key={idea.id}
+                  idea={idea}
+                  shelf={shelf.name}
+                  onOpen={openCard}
+                />
+              )),
+            )}
           </div>
         </>
       )}

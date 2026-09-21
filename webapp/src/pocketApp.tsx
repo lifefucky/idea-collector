@@ -91,6 +91,14 @@ export function PocketApp({
   }, []);
 
   useLayoutEffect(() => {
+    const navVisible = !cardOpen && !overlayOpen;
+    const body = document.body;
+    if (navVisible) {
+      body.setAttribute("data-nav-visible", "true");
+    } else {
+      body.setAttribute("data-nav-visible", "false");
+    }
+
     if (tab === "sources") {
       if (overlayOpen) {
         onCardOpenChange(true, cancelOverlay);

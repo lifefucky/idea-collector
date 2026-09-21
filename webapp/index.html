@@ -49,8 +49,7 @@
         color: #ffffff;
         min-height: 100%;
       }
-      body:has(.idea-card) #app-shell,
-      body:has(.sources-overlay[data-state="open"]) #app-shell {
+      body[data-nav-visible="false"] #app-shell {
         padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
       }
       #capture-strip {
