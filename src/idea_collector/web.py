@@ -97,39 +97,36 @@ def _json_error(status: int, message: str) -> web.Response:
     return web.json_response({"error": message}, status=status)
 
 
-async def handle_index(request: web.Request) -> web.StreamResponse:
+def _public_count(request: web.Request) -> int:
+    """Count used by GET / and GET /api/count.
+
+    Local preview always uses the local owner pocket. Telegram scopes by
+    owner when initData is valid, otherwise falls back to the global count
+    so the Mini App still renders.
+    """
+
     store = request.app[STORE_KEY]
     config = request.app[CONFIG_KEY]
+    if _is_local_request(request):
+        return store.count_for_owner(f"local:{config.operator_telegram_id}")
+    try:
+        owner = _owner_from_request(request)
+    except AuthError:
+        return store.count()
+    return store.count_for_owner(owner)
+
+
+async def handle_index(request: web.Request) -> web.StreamResponse:
     path = webapp_index_path()
     if not path.is_file():
         raise web.HTTPNotFound(text="webapp index is missing; build webapp/dist")
     html = path.read_text(encoding="utf-8")
-    # For local preview, show the count for the local owner pocket so the
-    # counter matches what the operator sees in the app. For Telegram and
-    # other environments, try to scope by owner when auth is available, but
-    # fall back to the global count so the Mini App still renders even when
-    # initData is missing or invalid.
-    if _is_local_request(request):
-        owner = f"local:{config.operator_telegram_id}"
-        count = store.count_for_owner(owner)
-    else:
-        try:
-            owner = _owner_from_request(request)
-        except AuthError:
-            count = store.count()
-        else:
-            count = store.count_for_owner(owner)
-    body = inject_count(html, count)
+    body = inject_count(html, _public_count(request))
     return web.Response(text=body, content_type="text/html")
 
 
 async def handle_count(request: web.Request) -> web.StreamResponse:
-    try:
-        owner = _owner_from_request(request)
-    except AuthError as exc:
-        return _json_error(exc.status, exc.message)
-    store = request.app[STORE_KEY]
-    return web.json_response({"count": store.count_for_owner(owner)})
+    return web.json_response({"count": _public_count(request)})
 
 
 async def handle_list_ideas(request: web.Request) -> web.StreamResponse:

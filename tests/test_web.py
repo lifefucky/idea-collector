@@ -51,6 +51,13 @@ def _auth_headers(user_id: int = OPERATOR_ID) -> dict[str, str]:
     return {"Authorization": f"tma {make_init_data(user_id)}"}
 
 
+REMOTE_HOST = {"Host": "pocket.test"}
+
+
+def _counter_in_html(body: str, count: int) -> bool:
+    return f'id="ideas-counter">{count}</span>' in body
+
+
 @pytest.fixture
 async def enricher(store: IdeaStore) -> Enricher:
     return Enricher(store, ImmediateLlm())  # type: ignore[arg-type]
@@ -428,6 +435,52 @@ async def test_webapp_persist_fail_keeps_count(config, enricher: Enricher) -> No
     finally:
         await test_client.close()
         boom.close()
+
+
+@pytest.mark.asyncio
+async def test_api_count_matches_index_owner_and_fallback(
+    client, store: IdeaStore
+) -> None:
+    local_headers = {"Authorization": "tma dev"}
+    await client.post(
+        "/api/ideas",
+        json={"text": "local idea"},
+        headers=local_headers,
+    )
+    await client.post(
+        "/api/ideas",
+        json={"text": "tg idea"},
+        headers=_auth_headers(),
+    )
+    assert store.count() == 2
+
+    local_html = await client.get("/")
+    local_count = await client.get("/api/count")
+    assert local_html.status == 200
+    assert local_count.status == 200
+    assert _counter_in_html(await local_html.text(), 1)
+    assert (await local_count.json()) == {"count": 1}
+
+    hmac_on_localhost = await client.get("/api/count", headers=_auth_headers())
+    assert hmac_on_localhost.status == 200
+    assert (await hmac_on_localhost.json()) == {"count": 1}
+
+    remote_html = await client.get("/", headers=REMOTE_HOST)
+    remote_count = await client.get("/api/count", headers=REMOTE_HOST)
+    assert remote_html.status == 200
+    assert remote_count.status == 200
+    assert _counter_in_html(await remote_html.text(), 2)
+    assert (await remote_count.json()) == {"count": 2}
+
+    tg_count = await client.get(
+        "/api/count",
+        headers={**REMOTE_HOST, **_auth_headers()},
+    )
+    assert tg_count.status == 200
+    assert (await tg_count.json()) == {"count": 1}
+
+    ideas_still_auth = await client.get("/api/ideas")
+    assert ideas_still_auth.status == 401
 
 
 @pytest.mark.asyncio
