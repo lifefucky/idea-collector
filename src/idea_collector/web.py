@@ -98,11 +98,12 @@ def _json_error(status: int, message: str) -> web.Response:
 
 
 def _public_count(request: web.Request) -> int:
-    """Count used by GET / and GET /api/count.
+    """Count used by GET / for first-paint HTML.
 
-    Local preview always uses the local owner pocket. Telegram scopes by
-    owner when initData is valid, otherwise falls back to the global count
-    so the Mini App still renders.
+    Local preview always uses the local owner pocket so the operator sees
+    their own Mini App state. For non-local hosts, try to scope by owner
+    when auth is available, but fall back to the global count so the Mini
+    App still renders even when initData is missing or invalid.
     """
 
     store = request.app[STORE_KEY]
@@ -126,7 +127,12 @@ async def handle_index(request: web.Request) -> web.StreamResponse:
 
 
 async def handle_count(request: web.Request) -> web.StreamResponse:
-    return web.json_response({"count": _public_count(request)})
+    try:
+        owner = _owner_from_request(request)
+    except AuthError as exc:
+        return _json_error(exc.status, exc.message)
+    store = request.app[STORE_KEY]
+    return web.json_response({"count": store.count_for_owner(owner)})
 
 
 async def handle_list_ideas(request: web.Request) -> web.StreamResponse:

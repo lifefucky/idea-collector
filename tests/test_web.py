@@ -438,7 +438,7 @@ async def test_webapp_persist_fail_keeps_count(config, enricher: Enricher) -> No
 
 
 @pytest.mark.asyncio
-async def test_api_count_matches_index_owner_and_fallback(
+async def test_api_count_requires_auth_and_scopes_owner(
     client, store: IdeaStore
 ) -> None:
     local_headers = {"Authorization": "tma dev"}
@@ -454,32 +454,35 @@ async def test_api_count_matches_index_owner_and_fallback(
     )
     assert store.count() == 2
 
-    local_html = await client.get("/")
-    local_count = await client.get("/api/count")
-    assert local_html.status == 200
+    # Unauthenticated API count is rejected even on localhost.
+    unauth = await client.get("/api/count")
+    assert unauth.status == 401
+
+    # Local dev token on localhost sees only the local pocket.
+    local_count = await client.get("/api/count", headers=local_headers)
     assert local_count.status == 200
-    assert _counter_in_html(await local_html.text(), 1)
     assert (await local_count.json()) == {"count": 1}
 
-    hmac_on_localhost = await client.get("/api/count", headers=_auth_headers())
-    assert hmac_on_localhost.status == 200
-    assert (await hmac_on_localhost.json()) == {"count": 1}
+    # First-paint HTML still falls back: localhost shows the local pocket,
+    # remote host without auth shows global count so the Mini App renders.
+    local_html = await client.get("/")
+    assert local_html.status == 200
+    assert _counter_in_html(await local_html.text(), 1)
 
     remote_html = await client.get("/", headers=REMOTE_HOST)
-    remote_count = await client.get("/api/count", headers=REMOTE_HOST)
     assert remote_html.status == 200
-    assert remote_count.status == 200
     assert _counter_in_html(await remote_html.text(), 2)
-    assert (await remote_count.json()) == {"count": 2}
 
-    tg_count = await client.get(
+    # Remote host with Telegram HMAC sees only the Telegram pocket.
+    tg_remote = await client.get(
         "/api/count",
         headers={**REMOTE_HOST, **_auth_headers()},
     )
-    assert tg_count.status == 200
-    assert (await tg_count.json()) == {"count": 1}
+    assert tg_remote.status == 200
+    assert (await tg_remote.json()) == {"count": 1}
 
-    ideas_still_auth = await client.get("/api/ideas")
+    # Remote host without auth still requires auth for /api/ideas.
+    ideas_still_auth = await client.get("/api/ideas", headers=REMOTE_HOST)
     assert ideas_still_auth.status == 401
 
 
