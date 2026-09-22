@@ -1,0 +1,16 @@
+services:
+  idea-collector:
+    build: .
+    image: idea-collector
+    env_file: .env
+    environment:
+      SQLITE_PATH: /data/ideas.db
+      PORT: "8080"
+    volumes:
+      - data:/data
+    ports:
+      - "8080:8080"
+
+volumes:
+  data:
+    name: idea-collector-data

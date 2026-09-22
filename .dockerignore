@@ -1,0 +1,41 @@
+# Secrets and local state
+.env
+.envrc
+**/.env
+.env.*
+**/.env.*
+*.db
+**/*.db
+*.db-wal
+*.db-shm
+*.db-journal
+**/*.db-wal
+**/*.db-shm
+**/*.db-journal
+
+# Local environments and install trees
+.venv
+**/.venv
+webapp/node_modules
+webapp/dist
+
+# Host research dumps and catalogs
+research/
+
+# BMad, agents, editor, VCS
+_bmad*
+.agents
+.git
+.cursor
+.github
+
+# Tests, docs, caches
+tests
+docs
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.vite
+**/.vite
