@@ -19,19 +19,15 @@ COPY src ./src
 RUN uv sync --locked --no-dev --no-editable
 
 FROM python:3.12-slim-trixie
-RUN groupadd --system --gid 999 nonroot \
-    && useradd --system --gid 999 --uid 999 --create-home nonroot \
-    && mkdir -p /app/data \
-    && chown -R nonroot:nonroot /app
-COPY --from=builder --chown=nonroot:nonroot /usr/src/app/.venv /usr/src/app/.venv
-COPY --from=frontend --chown=nonroot:nonroot /web/dist /usr/src/app/webapp/dist
+RUN mkdir -p /app/data && chmod 777 /app/data
+COPY --from=builder /usr/src/app/.venv /usr/src/app/.venv
+COPY --from=frontend /web/dist /usr/src/app/webapp/dist
 RUN ln -sf /usr/src/app/.venv/bin/idea-collector /usr/local/bin/idea-collector
 ENV PORT=8080 \
     PATH="/usr/src/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     SQLITE_PATH=/app/data/ideas.db
 WORKDIR /usr/src/app
-USER nonroot
 EXPOSE 8080
 STOPSIGNAL SIGINT
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \

@@ -3,6 +3,7 @@ from __future__ import annotations
 import sqlite3
 import threading
 from datetime import UTC, datetime
+from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import String, Text, create_engine, func, select
@@ -104,6 +105,7 @@ def _init_disk_schema(path: str) -> None:
         # In-memory databases are always created fresh by SQLAlchemy.
         return
 
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(path)
     conn.row_factory = sqlite3.Row
     try:

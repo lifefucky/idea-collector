@@ -23,7 +23,7 @@
 | `.env` | Локальные секреты (не в git). Процесс сам файл не читает — нужен `uv run --env-file`. |
 | [.python-version](../.python-version) | Требуемая версия Python: 3.12. |
 | [.gitignore](../.gitignore) | Игнор: `.env`, `*.db`, `webapp/dist`, `_bmad*`, `.agents`. |
-| [Dockerfile](../Dockerfile) | Многостадийный образ: сборка фронтенда (Node+Vite), установка Python-зависимостей через `uv` и финальный runtime с non-root пользователем, код в `/usr/src/app`, запуск `/usr/local/bin/idea-collector`, SQLite в `/app/data`. |
+| [Dockerfile](../Dockerfile) | Многостадийный образ: сборка фронтенда (Node+Vite), установка Python-зависимостей через `uv`, код в `/usr/src/app`, запуск `/usr/local/bin/idea-collector`, SQLite в `/app/data`. |
 | [LICENSE](../LICENSE) | Apache License 2.0. |
 
 ## Бэкенд — `src/idea_collector`
