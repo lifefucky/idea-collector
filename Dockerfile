@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 FROM node:22-alpine AS frontend
 WORKDIR /web
 COPY webapp/package.json webapp/package-lock.json ./
@@ -14,14 +12,11 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_PYTHON_DOWNLOADS=0 \
     UV_NO_DEV=1
 WORKDIR /app
-RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --locked --no-install-project --no-dev --no-editable
-COPY pyproject.toml uv.lock README.md ./
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked --no-install-project --no-dev --no-editable
+COPY README.md ./
 COPY src ./src
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev --no-editable
+RUN uv sync --locked --no-dev --no-editable
 
 FROM python:3.12-slim-trixie
 RUN groupadd --system --gid 999 nonroot \
