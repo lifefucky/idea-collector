@@ -25,13 +25,15 @@ RUN groupadd --system --gid 999 nonroot \
     && chown -R nonroot:nonroot /app
 COPY --from=builder --chown=nonroot:nonroot /usr/src/app/.venv /usr/src/app/.venv
 COPY --from=frontend --chown=nonroot:nonroot /web/dist /usr/src/app/webapp/dist
+RUN ln -sf /usr/src/app/.venv/bin/idea-collector /usr/local/bin/idea-collector
 ENV PORT=8080 \
     PATH="/usr/src/app/.venv/bin:$PATH" \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    SQLITE_PATH=/app/data/ideas.db
 WORKDIR /usr/src/app
 USER nonroot
 EXPOSE 8080
 STOPSIGNAL SIGINT
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/' % os.environ.get('PORT', '8080'), timeout=4)"
-CMD ["idea-collector"]
+CMD ["/usr/local/bin/idea-collector"]
