@@ -4,10 +4,10 @@ services:
     image: idea-collector
     env_file: .env
     environment:
-      SQLITE_PATH: /data/ideas.db
+      SQLITE_PATH: /app/data/ideas.db
       PORT: "8080"
     volumes:
-      - data:/data
+      - data:/app/data
     ports:
       - "8080:8080"
 

@@ -50,7 +50,7 @@ uv run --env-file .env idea-collector
 
 ## Docker
 
-Образ собирает Mini App и ставит Python-приложение; на хосте не нужны Node и uv. SQLite живёт на томе `idea-collector-data` (`/data` в контейнере) — Compose и `docker run` ниже делят это имя. Compose (и `-e` в примере `docker run`) задаёт `SQLITE_PATH=/data/ideas.db` и `PORT=8080`, иначе значения из `.env` (`ideas.db` или другой порт) разъехались бы с томом и пробросом `8080:8080`.
+Образ собирает Mini App и ставит Python-приложение; на хосте не нужны Node и uv. SQLite живёт на томе `idea-collector-data` (`/app/data` в контейнере) — Compose и `docker run` ниже делят это имя. Compose (и `-e` в примере `docker run`) задаёт `SQLITE_PATH=/app/data/ideas.db` и `PORT=8080`, иначе значения из `.env` (`ideas.db` или другой порт) разъехались бы с томом и пробросом `8080:8080`.
 
 ```bash
 docker compose up --build
@@ -60,8 +60,8 @@ docker compose up --build
 
 ```bash
 docker build -t idea-collector .
-docker run --rm --env-file .env -e SQLITE_PATH=/data/ideas.db -e PORT=8080 \
-  -v idea-collector-data:/data -p 8080:8080 idea-collector
+docker run --rm --env-file .env -e SQLITE_PATH=/app/data/ideas.db -e PORT=8080 \
+  -v idea-collector-data:/app/data -p 8080:8080 idea-collector
 ```
 
 Контейнер слушает `8080`. Перед Mini App по-прежнему нужен HTTPS-прокси на этот порт.

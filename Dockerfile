@@ -11,7 +11,7 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=0 \
     UV_NO_DEV=1
-WORKDIR /app
+WORKDIR /usr/src/app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-install-project --no-dev --no-editable
 COPY README.md ./
@@ -21,14 +21,14 @@ RUN uv sync --locked --no-dev --no-editable
 FROM python:3.12-slim-trixie
 RUN groupadd --system --gid 999 nonroot \
     && useradd --system --gid 999 --uid 999 --create-home nonroot \
-    && mkdir -p /data \
-    && chown nonroot:nonroot /data
-COPY --from=builder --chown=nonroot:nonroot /app/.venv /app/.venv
-COPY --from=frontend --chown=nonroot:nonroot /web/dist /app/webapp/dist
+    && mkdir -p /app/data \
+    && chown -R nonroot:nonroot /app
+COPY --from=builder --chown=nonroot:nonroot /usr/src/app/.venv /usr/src/app/.venv
+COPY --from=frontend --chown=nonroot:nonroot /web/dist /usr/src/app/webapp/dist
 ENV PORT=8080 \
-    PATH="/app/.venv/bin:$PATH" \
+    PATH="/usr/src/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1
-WORKDIR /app
+WORKDIR /usr/src/app
 USER nonroot
 EXPOSE 8080
 STOPSIGNAL SIGINT
