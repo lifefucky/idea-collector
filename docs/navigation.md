@@ -1,6 +1,6 @@
 # Навигация по файлам
 
-Путь от корня репозитория и краткое назначение. Не включены: `.git`, `node_modules`, `webapp/dist`, кэш `_bmad/`, установленные скиллы `.agents/`, локальная БД `ideas.db`, дампы `research/`.
+Путь от корня репозитория и краткое назначение. Не включены: `.git`, `node_modules`, `webapp/dist`, кэш `_bmad/`, установленные скиллы `.agents/`, локальная БД `ideas.db`, артефакты исследовательских выгрузок.
 
 ## Документация
 
@@ -23,6 +23,7 @@
 | `.env` | Локальные секреты (не в git). Процесс сам файл не читает — нужен `uv run --env-file`. |
 | [.python-version](../.python-version) | Требуемая версия Python: 3.12. |
 | [.gitignore](../.gitignore) | Игнор: `.env`, `*.db`, `webapp/dist`, `_bmad*`, `.agents`. |
+| [Dockerfile](../Dockerfile) | Многостадийный образ: сборка фронтенда (Node+Vite), установка Python-зависимостей через `uv` и финальный runtime с non-root пользователем и healthcheck. |
 | [LICENSE](../LICENSE) | Apache License 2.0. |
 
 ## Бэкенд — `src/idea_collector`

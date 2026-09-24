@@ -30,7 +30,8 @@ RUN groupadd --system --gid 999 nonroot \
     && chown nonroot:nonroot /data
 COPY --from=builder --chown=nonroot:nonroot /app/.venv /app/.venv
 COPY --from=frontend --chown=nonroot:nonroot /web/dist /app/webapp/dist
-ENV PATH="/app/.venv/bin:$PATH" \
+ENV PORT=8080 \
+    PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1
 WORKDIR /app
 USER nonroot
